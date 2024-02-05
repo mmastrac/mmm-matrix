@@ -1,0 +1,9 @@
+- os: windows
+- os: mac
+  arm: true
+- os: mac
+  arm: false
+- os: linux
+  arm: true
+- os: linux
+  arm: false

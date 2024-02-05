@@ -1,0 +1,3 @@
+arm:
+  [false, { "$value": true, "$if": "this.os == 'mac'" }]
+os: [mac, linux]

@@ -1,0 +1,11 @@
+export INPUT_INPUT="
+label:
+  linux:
+    os: ubuntu-latest
+    job: [job-a, job-b, job-c]
+  macos:
+    os: macOS-latest
+    job: [job-c]
+  windows:
+    os: windows-2019
+    job: [job-a]"

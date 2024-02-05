@@ -1,0 +1,6 @@
+- os: mac
+  runner: mac-xl
+- os: windows
+  runner: windows-xl
+- os: linux
+  runner: linux-xl

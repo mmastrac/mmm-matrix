@@ -1,0 +1,7 @@
+{
+  "os": {
+    "linux": { "runner": "xl" },
+    "mac": {},
+    "windows": { "runner": "xl" }
+  }
+}

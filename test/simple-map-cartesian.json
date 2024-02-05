@@ -1,0 +1,4 @@
+{
+  "os": ["linux", "windows", "mac"],
+  "test": [true, false]
+}

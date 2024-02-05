@@ -1,0 +1,2 @@
+os: [linux, { $value: mac, arm: [true, false] }]
+job: [job-a, { $value: job-b, job-b-special-flag: true }, job-c]

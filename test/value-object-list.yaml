@@ -1,0 +1,1 @@
+os: [windows, { $value: [mac, linux], arm: [true, false] }]

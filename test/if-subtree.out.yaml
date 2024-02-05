@@ -1,0 +1,6 @@
+- arm: false
+  os: mac
+- arm: false
+  os: linux
+- arm: true
+  os: mac

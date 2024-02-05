@@ -1,0 +1,15 @@
+- label: linux
+  os: ubuntu-latest
+  job: job-a
+- label: linux
+  os: ubuntu-latest
+  job: job-b
+- label: linux
+  os: ubuntu-latest
+  job: job-c
+- label: macos
+  os: macOS-latest
+  job: job-c
+- label: windows
+  os: windows-2019
+  job: job-a

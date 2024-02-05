@@ -1,0 +1,6 @@
+- os: linux
+  $if: config.expensive == false
+- os: mac
+  $if: config.expensive == true
+- os: windows
+  $if: config.expensive == true

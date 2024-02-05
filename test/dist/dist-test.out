@@ -1,0 +1,43 @@
+::group::Input matrix
+label:
+  linux:
+    os: ubuntu-latest
+    job:
+      - job-a
+      - job-b
+      - job-c
+  macos:
+    os: macOS-latest
+    job:
+      - job-c
+  windows:
+    os: windows-2019
+    job:
+      - job-a
+
+::endgroup::
+::group::Config object
+null
+
+::endgroup::
+::group::Generated matrix
+- label: linux
+  os: ubuntu-latest
+  job: job-a
+- label: linux
+  os: ubuntu-latest
+  job: job-b
+- label: linux
+  os: ubuntu-latest
+  job: job-c
+- label: macos
+  os: macOS-latest
+  job: job-c
+- label: windows
+  os: windows-2019
+  job: job-a
+
+::endgroup::
+
+::set-output name=matrix::[{"label":"linux","os":"ubuntu-latest","job":"job-a"},{"label":"linux","os":"ubuntu-latest","job":"job-b"},{"label":"linux","os":"ubuntu-latest","job":"job-c"},{"label":"macos","os":"macOS-latest","job":"job-c"},{"label":"windows","os":"windows-2019","job":"job-a"}]
+Success.

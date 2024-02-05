@@ -1,0 +1,12 @@
+- os: linux
+  test: true
+- os: linux
+  test: false
+- os: windows
+  test: true
+- os: windows
+  test: false
+- os: mac
+  test: true
+- os: mac
+  test: false

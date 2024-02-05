@@ -1,0 +1,2 @@
+os: [mac, windows, linux]
+runner: { "$dynamic": "this.os + '-xl'" }

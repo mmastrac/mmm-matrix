@@ -1,0 +1,13 @@
+export INPUT_INPUT="
+- os: linux
+  \$if: config.json.expensive == false
+- os: mac
+  \$if: config.json.expensive == true
+- os: windows
+  \$if: config.json.expensive == true
+"
+export INPUT_CONFIG="
+json: {
+  "expensive": true
+}
+"
