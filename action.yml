@@ -1,0 +1,22 @@
+name: "mmm-matrix"
+author: "Matt Mastracci (matthew@mastracci.com)"
+description: "Matrix Maker"
+
+runs:
+  using: 'node20'
+  main: 'dist/action.js'
+
+branding:
+  icon: 'hash'
+  color: 'blue'
+
+inputs:
+  input:
+    description: 'Input matrix YAML'
+    required: true
+  config:
+    description: 'Configuration YAML'
+    required: false
+outputs:
+  matrix:
+    description: 'The generated matrix JSON'
