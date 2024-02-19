@@ -28,6 +28,13 @@ if (input === null) {
   process.exit(1);
 }
 
+const defaultMatrix = parseArg("default");
+if (defaultMatrix) {
+  core.startGroup("Default matrix");
+  core.info(highlight(YAML.stringify(input), { language: "yaml" }));
+  core.endGroup();
+}
+
 const config = parseArg("config");
 
 core.startGroup("Config object");
@@ -43,8 +50,13 @@ try {
 }
 
 if (output.length == 0) {
-  core.setFailed("Failed to generate any configurations");
-  process.exit(1);
+  if (defaultMatrix) {
+    core.info("No matrix items were generated, using default");
+    output = defaultMatrix;
+  } else {
+    core.setFailed("Failed to generate any matrix items");
+    process.exit(1);
+  }
 }
 
 core.startGroup("Generated matrix");
