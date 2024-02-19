@@ -37,6 +37,13 @@ function isObject(input: InputRecord): input is InputObject {
   return input !== null && input !== undefined && typeof input == "object";
 }
 
+function isDynamicObject(
+  input: InputRecord,
+): input is { [dynamicKey]: string } {
+  return input !== null && input !== undefined && typeof input == "object" &&
+    dynamicKey in input;
+}
+
 function arrayify(s?: string | string[]): string[] {
   if (s === undefined) {
     return [];
@@ -175,35 +182,34 @@ function flattenWithKeyInput(key: string, input: InputRecord): OutputRecord[] {
 function filterRecord(config: any, record: OutputRecord): boolean {
   for (const key of Object.keys(record)) {
     const value = record[key];
-    if (isObject(value)) {
-      if (dynamicKey in value) {
-        const noValue = Symbol();
-        const predicate = value[dynamicKey];
-        let cachedValue = noValue;
-        let computing = false;
-        Object.defineProperty(record, key, {
-          get() {
-            if (cachedValue === noValue) {
-              if (computing) {
-                throw new Error(
-                  `Circular dependency computing property '${key}' for expression '${predicate}'`,
-                );
-              }
-              computing = true;
-              try {
-                const fn = new Function("config", `return (${predicate})`).bind(
-                  record,
-                );
-                const value = fn(config);
-                cachedValue = value;
-              } finally {
-                computing = false;
-              }
+    if (isDynamicObject(value)) {
+      const noValue = Symbol();
+      const predicate = value[dynamicKey];
+      let cachedValue = noValue;
+      let computing = false;
+      Object.defineProperty(record, key, {
+        get() {
+          if (cachedValue === noValue) {
+            if (computing) {
+              throw new Error(
+                `Circular dependency computing property '${key}' for expression '${predicate}'`,
+              );
             }
-            return cachedValue;
-          },
-        });
-      }
+            computing = true;
+            try {
+              const fn = makeBindingFunction(predicate, record);
+              let value = fn(config);
+              if (value === "") {
+                value = undefined;
+              }
+              cachedValue = value;
+            } finally {
+              computing = false;
+            }
+          }
+          return cachedValue;
+        },
+      });
     }
   }
 
@@ -211,13 +217,25 @@ function filterRecord(config: any, record: OutputRecord): boolean {
   if (ifValue !== undefined) {
     for (const predicate of arrayify(ifValue)) {
       // NOTE: This is an `eval` call!
-      const fn = new Function("config", `return (${predicate})`).bind(record);
+      const fn = makeBindingFunction(predicate, record);
       if (!fn(config)) {
         return false;
       }
     }
   }
   return true;
+}
+
+function makeBindingFunction(predicate: string, record: OutputRecord) {
+  const trimmed = predicate.trim();
+  if (trimmed.length == 0) {
+    throw new Error("Invalid predicate: empty string");
+  }
+  try {
+    return new Function("config", `return (${trimmed})`).bind(record);
+  } catch (e) {
+    throw new Error(`Invalid predicate: ${trimmed}: ${e}`);
+  }
 }
 
 function itemShouldMaskPrevious(
