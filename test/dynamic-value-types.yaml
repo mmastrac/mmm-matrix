@@ -1,0 +1,5 @@
+undefined-value: { $dynamic: "undefined" }
+empty-string: { $dynamic: "''" }
+boolean-true: { $dynamic: "true" }
+boolean-false: { $dynamic: "false" }
+null-value: { $dynamic: "null" }
