@@ -1,0 +1,10 @@
+$multiply:
+  - - with-config: a
+      mode: debug
+    - with-config: b
+      mode: release
+  - - os: linux
+      job: job-a
+    - os: mac
+      job: job-b
+plus-key: a

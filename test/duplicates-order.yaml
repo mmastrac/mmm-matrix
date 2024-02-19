@@ -1,0 +1,4 @@
+- os: linux
+  debug: true
+- debug: true
+  os: linux

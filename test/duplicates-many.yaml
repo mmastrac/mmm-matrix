@@ -1,0 +1,8 @@
+- os: linux
+- debug: true
+- arm: true
+- label: linux-arm
+- os: linux
+  debug: true
+  arm: true
+  label: linux-arm

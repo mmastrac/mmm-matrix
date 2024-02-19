@@ -4,9 +4,21 @@
 
 `mmm-matrix` builds a matrix by "adding" and "multiplying" configurations.
 
+The matrix is built in three phases:
+
+1. Addition and multiplication: the nested objects, arrays and values are
+   combined to produce the candidate list of matrix items. The candidate list
+   may contain `$if` or `$dynamic` items that require further evaluation.
+2. Evaluation: `$if` or `$dynamic` items are evaluated and the computed item
+   list is generated.
+3. Merging: any items that are equivalent to a previous item are skipped, while
+   any item that is a strict superset of a previous item replaces that previous
+   item.
+
 ### Addition
 
-Addition happens using JSON or YAML lists. Specify two objects in a list and you get two matrix configurations:
+Addition happens using JSON or YAML lists. Specify two objects in a list and you
+get two matrix configurations:
 
 ```yaml
 - os: linux
@@ -29,11 +41,15 @@ os: [linux, mac]
 [{ os: linux }, { os: mac }]
 ```
 
-Note that while the default mode for lists is addition, you can multiply lists using the advanced `$multiply` key, described below.
+Note that while the default mode for lists is addition, you can multiply lists
+using the advanced `$multiply` key, described below.
 
 ### Multiplication
 
-Multiplication is done via [the Cartesian product](https://en.wikipedia.org/wiki/Cartesian_product) and happen when using JSON or YAML objects. All of the possible values of an object are multiplied together:
+Multiplication is done via
+[the Cartesian product](https://en.wikipedia.org/wiki/Cartesian_product) and
+happen when using JSON or YAML objects. All of the possible values of an object
+are multiplied together:
 
 ```yaml
 os: [linux, mac, windows]
@@ -42,12 +58,13 @@ test: [true, false]
 # Results in every combination:
 
 [{ os: linux, test: true }, { os: linux, test: false }, { os: mac, test: true }, ... ]
-
 ```
 
 ### Nested objects
 
-If you provide a nested object as the value of a key, the top-level key is paired with the second-level key as a value and multiplied by everything below that. For example:
+If you provide a nested object as the value of a key, the top-level key is
+paired with the second-level key as a value and multiplied by everything below
+that. For example:
 
 ```yaml
 label:
@@ -63,7 +80,8 @@ label:
 
 ### Arbitrary nesting levels
 
-Additions and multiplications can be nested arbitrarily, and the final product and sum of the entire tree becomes your matrix:
+Additions and multiplications can be nested arbitrarily, and the final product
+and sum of the entire tree becomes your matrix:
 
 ```yaml
 label:
@@ -81,36 +99,41 @@ label:
 # Results in:
 
 [{ label: linux, os: ubuntu-latest, job: job-a, distro: ubuntu }, ...]
-
 ```
 
 ## Configuration
 
-A configuration object can be provided for every matrix builder. A convenient value for this is the `github` [context](https://docs.github.com/en/actions/learn-github-actions/contexts) for your workflow, which effectively contains the entire input for your workflow.
+A configuration object can be provided for every matrix builder. A convenient
+value for this is the `github`
+[context](https://docs.github.com/en/actions/learn-github-actions/contexts) for
+your workflow, which effectively contains the entire input for your workflow.
 
 ```yaml
-  config: |
-    github: ${{ toJSON(github) }}
+config: |
+  github: ${{ toJSON(github) }}
 ```
 
 You can also provide computed keys:
 
 ```yaml
-  config: |
-    github: ${{ toJSON(github) }}
-    isMainBranch: ${{ github.ref == 'refs/heads/main' }}
-    isOwner: ${{ github.actor == github.repository_owner }}
+config: |
+  github: ${{ toJSON(github) }}
+  isMainBranch: ${{ github.ref == 'refs/heads/main' }}
+  isOwner: ${{ github.actor == github.repository_owner }}
 ```
 
-The configuration object is used by the special `$if` and `$dynamic` keys described below.
+The configuration object is used by the special `$if` and `$dynamic` keys
+described below.
 
-## Special object keys 
+## Special object keys
 
 ### `$value`
 
-The `$value` key is a special key that allows you to place a nested object where a value would normally go.
+The `$value` key is a special key that allows you to place a nested object where
+a value would normally go.
 
-For example, if you want to add `aarch64` and `amd64` support to the `mac` `os` item, but not the others:
+For example, if you want to add `aarch64` and `amd64` support to the `mac` `os`
+item, but not the others:
 
 ```yaml
 os: [linux, windows, mac]
@@ -126,9 +149,14 @@ os: [linux, windows, { "$value": "mac", arm: [true, false] }
 
 ### `$if`
 
-Adding the special `$if` key to an object adds a condition to any matrix item derived from this part of the tree. If there are multiple `$if` conditions that apply to a single matrix item, the matrix item is only included if all `$if` conditions evaluate to true.
+Adding the special `$if` key to an object adds a condition to any matrix item
+derived from this part of the tree. If there are multiple `$if` conditions that
+apply to a single matrix item, the matrix item is only included if all `$if`
+conditions evaluate to true.
 
-When the `$if` condition of the matrix item is evaluated, it has access to a JavaScript `this` object which refers to the currently evaluated item, and a `config` object which refers to the `config` input to the action.
+When the `$if` condition of the matrix item is evaluated, it has access to a
+JavaScript `this` object which refers to the currently evaluated item, and a
+`config` object which refers to the `config` input to the action.
 
 ```yaml
 label:
@@ -143,9 +171,14 @@ label:
 
 ### `$dynamic`
 
-Adding the special `$dynamic` key to an object adds a value that is evaluated only once the entire matrix has been built. This can be used to set the value of one output key to some function of the input configuration and/or other keys in that particular item.
+Adding the special `$dynamic` key to an object adds a value that is evaluated
+only once the entire matrix has been built. This can be used to set the value of
+one output key to some function of the input configuration and/or other keys in
+that particular item.
 
-When the `$dynamic` condition of the matrix item is evaluated, it has access to a JavaScript `this` object which refers to the currently evaluated item, and a `config` object which refers to the `config` input to the action.
+When the `$dynamic` condition of the matrix item is evaluated, it has access to
+a JavaScript `this` object which refers to the currently evaluated item, and a
+`config` object which refers to the `config` input to the action.
 
 ```yaml
 os: { "$dynamic": "this.distro + '-latest'" }
@@ -158,7 +191,9 @@ distro: [ubuntu, arch]
 
 ### `$multiply`
 
-While lists are normally added together, you can also multiply them using the special `$multiply` key. Unless you need to multiply more complicated item configurations together, this operator should be avoided.
+While lists are normally added together, you can also multiply them using the
+special `$multiply` key. Unless you need to multiply more complicated item
+configurations together, this operator should be avoided.
 
 ```yaml
 $multiply:
@@ -176,9 +211,27 @@ $multiply:
 [{ with-config: a, mode: debug, os: linux, job: job-a }, { with-config: b, mode: release, os: linux, job: job-a }, ...]
 ```
 
+## Merging
+
+Any items that are equivalent to a previous item are skipped, while any item
+that is a strict superset of a previous item replaces that previous item.
+
+For example, an item that has one extra key than another will mask the former:
+
+```yaml
+- os: linux
+- os: linux
+  debug: true
+
+# Results in:
+
+[{ os: linux, debug: true }]
+```
+
 ## Action Configuration
 
-The `mmm-matrix` action is designed to be an input for a job with `strategy: matrix`.
+The `mmm-matrix` action is designed to be an input for a job with
+`strategy: matrix`.
 
 ```yaml
 jobs:

@@ -9,7 +9,9 @@ type IfStatement = { [ifKey]?: string | string[] };
 
 // deno-lint-ignore no-explicit-any
 type InputRecord = boolean | string | any[] | InputObject;
-type InputObject = { [key: string]: InputRecord } & { [multiplyKey]?: InputRecord[] };
+type InputObject = { [key: string]: InputRecord } & {
+  [multiplyKey]?: InputRecord[];
+};
 type InputValue = { [valueKey]: string | boolean } | { [dynamicKey]: string };
 
 // https://stackoverflow.com/questions/12303989/cartesian-product-of-multiple-arrays-in-javascript
@@ -104,7 +106,9 @@ function flatten(input: InputRecord): OutputRecord[] {
             }
             outputs.push(cartesianMerge(...nestedOutputs));
           } else {
-            throw new Error(`Unexpected value for '$multiply': ${typeof input} (expected an array)`);
+            throw new Error(
+              `Unexpected value for '$multiply': ${typeof input} (expected an array)`,
+            );
           }
         } else {
           outputs.push(flattenWithKeyInput(key, input[key]));
@@ -216,13 +220,48 @@ function filterRecord(config: any, record: OutputRecord): boolean {
   return true;
 }
 
+function itemShouldMaskPrevious(
+  item: OutputRecord,
+  previous: OutputRecord,
+): "no" | "equal" | "superset" {
+  const keys1 = Object.keys(item);
+  const keys2 = Object.keys(previous);
+  if (keys2.length > keys1.length) {
+    return "no";
+  }
+  for (const key2 of keys2) {
+    if (String(item[key2]) !== String(previous[key2])) {
+      return "no";
+    }
+  }
+  return keys1.length == keys2.length ? "equal" : "superset";
+}
+
 // deno-lint-ignore no-explicit-any
 export function generateMatrix(input: any, config: any): OutputRecord[] {
   if (!isObject(input) && !isArray(input)) {
     throw new Error("Top-level input must be an array or object");
   }
   const flattened = flatten(input);
-  return flattened.filter((record) => filterRecord(config, record)).map((x) =>
-    JSON.parse(JSON.stringify(x))
-  );
+  const evaluated = flattened.filter((record) => filterRecord(config, record))
+    .map((x) => <OutputRecord> JSON.parse(JSON.stringify(x)));
+
+  // This is O(n^2) but hopefully we don't ever hit that complexity. If we do, we'll probably
+  // need to use indexes.
+  const merged: OutputRecord[] = [];
+  outer: for (const item of evaluated) {
+    for (let i = 0; i < merged.length; i++) {
+      const result = itemShouldMaskPrevious(item, merged[i]);
+      if (result == "equal") {
+        continue outer;
+      }
+      if (result == "superset") {
+        merged.splice(i, 1);
+        i--;
+      }
+    }
+    merged.push(item);
+  }
+
+  return merged;
 }
