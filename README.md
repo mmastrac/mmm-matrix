@@ -1,6 +1,42 @@
 # mmmm: Matrix Maker for GitHub Actions
 
-## Building Matrices
+`mmm-matrix` is a quick and concise way to build a dynamic GitHub Actions matrix
+that can react to different build inputs and events.
+
+## Background: GitHub Actions matrix
+
+A GitHub Actions matrix is a way to run a job or a set of jobs across different
+configurations. It's like setting up multiple versions of your workflow to run
+simultaneously but with slight variations in settings.
+
+Imagine you have a test suite for your software that you want to run on
+different operating systems and with different versions of programming
+languages. Instead of creating separate workflows for each combination, you can
+define a matrix where each combination becomes a separate job run.
+
+For example, you can specify a matrix with operating systems like Ubuntu, macOS,
+and Windows, and another dimension for programming language versions like Python
+3.7, 3.8, and 3.9. GitHub Actions will then automatically create individual job
+runs for each combination, such as running the tests on Ubuntu with Python 3.7,
+on macOS with Python 3.8, and so on.
+
+This approach helps streamline your workflow, making it easier to manage and
+ensuring consistent testing across different environments. It's especially
+useful for projects that need to support multiple platforms or configurations.
+
+## Why `mmm-matrix`?
+
+`mmm-matrix` solves the problem of efficiently managing and generating complex
+matrices for GitHub Actions workflows. Without `mmm-matrix`, creating and
+maintaining matrices with various configurations, such as different operating
+systems, programming languages, or versions, can be time-consuming and
+error-prone. Developers would have to manually write out all the combinations,
+leading to potential mistakes and inefficiencies. `mmm-matrix` automates this
+process, allowing users to define configurations using simple syntax and rules.
+It handles the generation of matrix items, including combinations and
+conditions, streamlining the matrix workflow setup.
+
+## Building matrices
 
 `mmm-matrix` builds a matrix by "adding" and "multiplying" configurations.
 
