@@ -1,0 +1,20 @@
+::group::Input matrix
+[]
+
+::endgroup::
+::group::Default matrix
+- default: true
+
+::endgroup::
+::group::Config object
+null
+
+::endgroup::
+No matrix items were generated, using default
+::group::Generated matrix
+- default: true
+
+::endgroup::
+
+::set-output name=matrix::[{"default":true}]
+Success.

@@ -31,7 +31,7 @@ if (input === null) {
 const defaultMatrix = parseArg("default");
 if (defaultMatrix) {
   core.startGroup("Default matrix");
-  core.info(highlight(YAML.stringify(input), { language: "yaml" }));
+  core.info(highlight(YAML.stringify(defaultMatrix), { language: "yaml" }));
   core.endGroup();
 }
 

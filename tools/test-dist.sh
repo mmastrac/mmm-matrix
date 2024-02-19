@@ -10,4 +10,5 @@ export GITHUB_OUTPUT=
 
 diff -u test/dist/dist-test.out <(. test/dist/dist-test.in && node dist/action.js)
 diff -u test/dist/dist-config.out <(. test/dist/dist-config.in && node dist/action.js)
+diff -u test/dist/dist-default.out <(. test/dist/dist-default.in && node dist/action.js)
 echo Tests passed.
