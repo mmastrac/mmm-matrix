@@ -1,6 +1,7 @@
 const ifKey = "$if";
 const valueKey = "$value";
 const dynamicKey = "$dynamic";
+const multiplyKey = "$multiply";
 
 type OutputRecord = Record<string, OutputValue> & IfStatement;
 type OutputValue = string | boolean | { [dynamicKey]: string };
@@ -8,7 +9,7 @@ type IfStatement = { [ifKey]?: string | string[] };
 
 // deno-lint-ignore no-explicit-any
 type InputRecord = boolean | string | any[] | InputObject;
-type InputObject = { [key: string]: InputRecord };
+type InputObject = { [key: string]: InputRecord } & { [multiplyKey]?: InputRecord[] };
 type InputValue = { [valueKey]: string | boolean } | { [dynamicKey]: string };
 
 // https://stackoverflow.com/questions/12303989/cartesian-product-of-multiple-arrays-in-javascript
@@ -95,7 +96,19 @@ function flatten(input: InputRecord): OutputRecord[] {
       const outputs = [];
       // label: [a, b, c] + os: [mac, linux] = label a, os mac, label a, os linux, etc...
       for (const key of keys) {
-        outputs.push(flattenWithKeyInput(key, input[key]));
+        if (key == multiplyKey) {
+          if (input[multiplyKey] !== undefined && isArray(input[multiplyKey])) {
+            const nestedOutputs = [];
+            for (const value of input[multiplyKey]) {
+              nestedOutputs.push(flatten(value));
+            }
+            outputs.push(cartesianMerge(...nestedOutputs));
+          } else {
+            throw new Error(`Unexpected value for '$multiply': ${typeof input} (expected an array)`);
+          }
+        } else {
+          outputs.push(flattenWithKeyInput(key, input[key]));
+        }
       }
 
       return cartesianMerge(...outputs);

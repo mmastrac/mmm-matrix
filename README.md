@@ -8,7 +8,7 @@
 
 Addition happens using JSON or YAML lists. Specify two objects in a list and you get two matrix configurations:
 
-```
+```yaml
 - os: linux
   test: true
 - os: mac
@@ -19,11 +19,23 @@ Addition happens using JSON or YAML lists. Specify two objects in a list and you
 [{ os: linux, test: true }, { os: mac, test: false }]
 ```
 
+You can also specify two values in a list to get two matrix configurations:
+
+```yaml
+os: [linux, mac]
+
+# Results in:
+
+[{ os: linux }, { os: mac }]
+```
+
+Note that while the default mode for lists is addition, you can multiply lists using the advanced `$multiply` key, described below.
+
 ### Multiplication
 
 Multiplication is done via [the Cartesian product](https://en.wikipedia.org/wiki/Cartesian_product) and happen when using JSON or YAML objects. All of the possible values of an object are multiplied together:
 
-```
+```yaml
 os: [linux, mac, windows]
 test: [true, false]
 
@@ -33,11 +45,11 @@ test: [true, false]
 
 ```
 
-### Nested object
+### Nested objects
 
 If you provide a nested object as the value of a key, the top-level key is paired with the second-level key as a value and multiplied by everything below that. For example:
 
-```
+```yaml
 label:
   label-a:
     os: [a1, a2]
@@ -53,7 +65,7 @@ label:
 
 Additions and multiplications can be nested arbitrarily, and the final product and sum of the entire tree becomes your matrix:
 
-```
+```yaml
 label:
   linux:
     os: { "$dynamic": "`${this.distro}-latest`" }
@@ -118,7 +130,7 @@ Adding the special `$if` key to an object adds a condition to any matrix item de
 
 When the `$if` condition of the matrix item is evaluated, it has access to a JavaScript `this` object which refers to the currently evaluated item, and a `config` object which refers to the `config` input to the action.
 
-```
+```yaml
 label:
   linux:
     - $if: "this.distro == config.distro"
@@ -135,13 +147,33 @@ Adding the special `$dynamic` key to an object adds a value that is evaluated on
 
 When the `$dynamic` condition of the matrix item is evaluated, it has access to a JavaScript `this` object which refers to the currently evaluated item, and a `config` object which refers to the `config` input to the action.
 
-```
+```yaml
 os: { "$dynamic": "this.distro + '-latest'" }
 distro: [ubuntu, arch]
 
 # Results in:
 
 [{ os: "ubuntu-latest", distro: ubuntu }, { os: "arch-latest", distro: arch }]
+```
+
+### `$multiply`
+
+While lists are normally added together, you can also multiply them using the special `$multiply` key. Unless you need to multiply more complicated item configurations together, this operator should be avoided.
+
+```yaml
+$multiply:
+  - - with-config: a
+      mode: debug
+    - with-config: b
+      mode: release
+  - - os: linux
+      job: job-a
+    - os: mac
+      job: job-b
+
+# Results in:
+
+[{ with-config: a, mode: debug, os: linux, job: job-a }, { with-config: b, mode: release, os: linux, job: job-a }, ...]
 ```
 
 ## Action Configuration
