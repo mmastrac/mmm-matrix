@@ -1,0 +1,219 @@
+osFree:
+  linux: ubuntu-latest
+  macos: macOS-latest
+  windows: windows-2019
+osLarge:
+  linux: ubuntu-paid-xl
+  mac: mac-paid-xl
+  windows: windows-paid-xl
+isFork: false
+isMain: false
+isPR: true
+isFastBuild: false
+isTag: false
+github:
+  job: dist
+  ref: refs/heads/main
+  sha: a9c855db6744dbe93214bd5a08d3e9220e385693
+  repository: mmastrac/mmm-matrix
+  repository_owner: mmastrac
+  repository_owner_id: "512240"
+  repositoryUrl: git://github.com/mmastrac/mmm-matrix.git
+  run_id: "7963045767"
+  run_number: "51"
+  retention_days: "90"
+  run_attempt: "1"
+  artifact_cache_size_limit: "10"
+  repository_visibility: public
+  repo-self-hosted-runners-disabled: false
+  enterprise-managed-business-id: ""
+  repository_id: "756651512"
+  actor_id: "512240"
+  actor: mmastrac
+  triggering_actor: mmastrac
+  workflow: test
+  head_ref: ""
+  base_ref: ""
+  event_name: push
+  event:
+    after: a9c855db6744dbe93214bd5a08d3e9220e385693
+    base_ref: null
+    before: 68616b0a357394526f93fe4bfc8deb777df1c532
+    commits:
+      - author:
+          email: matthew@mastracci.com
+          name: Matt Mastracci
+          username: mmastrac
+        committer:
+          email: matthew@mastracci.com
+          name: Matt Mastracci
+          username: mmastrac
+        distinct: true
+        id: a9c855db6744dbe93214bd5a08d3e9220e385693
+        message: Add some additional prose to introduce the project
+        timestamp: 2024-02-19T10:05:03-07:00
+        tree_id: 6d78108a2531ed99a0b798eaea305d6ad06a0ca4
+        url: https://github.com/mmastrac/mmm-matrix/commit/a9c855db6744dbe93214bd5a08d3e9220e385693
+    compare: https://github.com/mmastrac/mmm-matrix/compare/68616b0a3573...a9c855db6744
+    created: false
+    deleted: false
+    forced: false
+    head_commit:
+      author:
+        email: matthew@mastracci.com
+        name: Matt Mastracci
+        username: mmastrac
+      committer:
+        email: matthew@mastracci.com
+        name: Matt Mastracci
+        username: mmastrac
+      distinct: true
+      id: a9c855db6744dbe93214bd5a08d3e9220e385693
+      message: Add some additional prose to introduce the project
+      timestamp: 2024-02-19T10:05:03-07:00
+      tree_id: 6d78108a2531ed99a0b798eaea305d6ad06a0ca4
+      url: https://github.com/mmastrac/mmm-matrix/commit/a9c855db6744dbe93214bd5a08d3e9220e385693
+    pusher:
+      email: matthew@mastracci.com
+      name: mmastrac
+    ref: refs/heads/main
+    repository:
+      allow_forking: true
+      archive_url: https://api.github.com/repos/mmastrac/mmm-matrix/{archive_format}{/ref}
+      archived: false
+      assignees_url: https://api.github.com/repos/mmastrac/mmm-matrix/assignees{/user}
+      blobs_url: https://api.github.com/repos/mmastrac/mmm-matrix/git/blobs{/sha}
+      branches_url: https://api.github.com/repos/mmastrac/mmm-matrix/branches{/branch}
+      clone_url: https://github.com/mmastrac/mmm-matrix.git
+      collaborators_url: https://api.github.com/repos/mmastrac/mmm-matrix/collaborators{/collaborator}
+      comments_url: https://api.github.com/repos/mmastrac/mmm-matrix/comments{/number}
+      commits_url: https://api.github.com/repos/mmastrac/mmm-matrix/commits{/sha}
+      compare_url: https://api.github.com/repos/mmastrac/mmm-matrix/compare/{base}...{head}
+      contents_url: https://api.github.com/repos/mmastrac/mmm-matrix/contents/{+path}
+      contributors_url: https://api.github.com/repos/mmastrac/mmm-matrix/contributors
+      created_at: 1707793560
+      default_branch: main
+      deployments_url: https://api.github.com/repos/mmastrac/mmm-matrix/deployments
+      description: Matrix Maker GitHub Action
+      disabled: false
+      downloads_url: https://api.github.com/repos/mmastrac/mmm-matrix/downloads
+      events_url: https://api.github.com/repos/mmastrac/mmm-matrix/events
+      fork: false
+      forks: 0
+      forks_count: 0
+      forks_url: https://api.github.com/repos/mmastrac/mmm-matrix/forks
+      full_name: mmastrac/mmm-matrix
+      git_commits_url: https://api.github.com/repos/mmastrac/mmm-matrix/git/commits{/sha}
+      git_refs_url: https://api.github.com/repos/mmastrac/mmm-matrix/git/refs{/sha}
+      git_tags_url: https://api.github.com/repos/mmastrac/mmm-matrix/git/tags{/sha}
+      git_url: git://github.com/mmastrac/mmm-matrix.git
+      has_discussions: false
+      has_downloads: true
+      has_issues: true
+      has_pages: false
+      has_projects: true
+      has_wiki: true
+      homepage: null
+      hooks_url: https://api.github.com/repos/mmastrac/mmm-matrix/hooks
+      html_url: https://github.com/mmastrac/mmm-matrix
+      id: 756651512
+      is_template: false
+      issue_comment_url: https://api.github.com/repos/mmastrac/mmm-matrix/issues/comments{/number}
+      issue_events_url: https://api.github.com/repos/mmastrac/mmm-matrix/issues/events{/number}
+      issues_url: https://api.github.com/repos/mmastrac/mmm-matrix/issues{/number}
+      keys_url: https://api.github.com/repos/mmastrac/mmm-matrix/keys{/key_id}
+      labels_url: https://api.github.com/repos/mmastrac/mmm-matrix/labels{/name}
+      language: TypeScript
+      languages_url: https://api.github.com/repos/mmastrac/mmm-matrix/languages
+      license: null
+      master_branch: main
+      merges_url: https://api.github.com/repos/mmastrac/mmm-matrix/merges
+      milestones_url: https://api.github.com/repos/mmastrac/mmm-matrix/milestones{/number}
+      mirror_url: null
+      name: mmm-matrix
+      node_id: R_kgDOLRmV-A
+      notifications_url: https://api.github.com/repos/mmastrac/mmm-matrix/notifications{?since,all,participating}
+      open_issues: 0
+      open_issues_count: 0
+      owner:
+        avatar_url: https://avatars.githubusercontent.com/u/512240?v=4
+        email: matthew@mastracci.com
+        events_url: https://api.github.com/users/mmastrac/events{/privacy}
+        followers_url: https://api.github.com/users/mmastrac/followers
+        following_url: https://api.github.com/users/mmastrac/following{/other_user}
+        gists_url: https://api.github.com/users/mmastrac/gists{/gist_id}
+        gravatar_id: ""
+        html_url: https://github.com/mmastrac
+        id: 512240
+        login: mmastrac
+        name: mmastrac
+        node_id: MDQ6VXNlcjUxMjI0MA==
+        organizations_url: https://api.github.com/users/mmastrac/orgs
+        received_events_url: https://api.github.com/users/mmastrac/received_events
+        repos_url: https://api.github.com/users/mmastrac/repos
+        site_admin: false
+        starred_url: https://api.github.com/users/mmastrac/starred{/owner}{/repo}
+        subscriptions_url: https://api.github.com/users/mmastrac/subscriptions
+        type: User
+        url: https://api.github.com/users/mmastrac
+      private: false
+      pulls_url: https://api.github.com/repos/mmastrac/mmm-matrix/pulls{/number}
+      pushed_at: 1708362392
+      releases_url: https://api.github.com/repos/mmastrac/mmm-matrix/releases{/id}
+      size: 671
+      ssh_url: git@github.com:mmastrac/mmm-matrix.git
+      stargazers: 0
+      stargazers_count: 0
+      stargazers_url: https://api.github.com/repos/mmastrac/mmm-matrix/stargazers
+      statuses_url: https://api.github.com/repos/mmastrac/mmm-matrix/statuses/{sha}
+      subscribers_url: https://api.github.com/repos/mmastrac/mmm-matrix/subscribers
+      subscription_url: https://api.github.com/repos/mmastrac/mmm-matrix/subscription
+      svn_url: https://github.com/mmastrac/mmm-matrix
+      tags_url: https://api.github.com/repos/mmastrac/mmm-matrix/tags
+      teams_url: https://api.github.com/repos/mmastrac/mmm-matrix/teams
+      topics: []
+      trees_url: https://api.github.com/repos/mmastrac/mmm-matrix/git/trees{/sha}
+      updated_at: 2024-02-13T04:29:50Z
+      url: https://github.com/mmastrac/mmm-matrix
+      visibility: public
+      watchers: 0
+      watchers_count: 0
+      web_commit_signoff_required: false
+    sender:
+      avatar_url: https://avatars.githubusercontent.com/u/512240?v=4
+      events_url: https://api.github.com/users/mmastrac/events{/privacy}
+      followers_url: https://api.github.com/users/mmastrac/followers
+      following_url: https://api.github.com/users/mmastrac/following{/other_user}
+      gists_url: https://api.github.com/users/mmastrac/gists{/gist_id}
+      gravatar_id: ""
+      html_url: https://github.com/mmastrac
+      id: 512240
+      login: mmastrac
+      node_id: MDQ6VXNlcjUxMjI0MA==
+      organizations_url: https://api.github.com/users/mmastrac/orgs
+      received_events_url: https://api.github.com/users/mmastrac/received_events
+      repos_url: https://api.github.com/users/mmastrac/repos
+      site_admin: false
+      starred_url: https://api.github.com/users/mmastrac/starred{/owner}{/repo}
+      subscriptions_url: https://api.github.com/users/mmastrac/subscriptions
+      type: User
+      url: https://api.github.com/users/mmastrac
+  server_url: https://github.com
+  api_url: https://api.github.com
+  graphql_url: https://api.github.com/graphql
+  ref_name: main
+  ref_protected: false
+  ref_type: branch
+  secret_source: Actions
+  workflow_ref: mmastrac/mmm-matrix/.github/workflows/test.yml@refs/heads/main
+  workflow_sha: a9c855db6744dbe93214bd5a08d3e9220e385693
+  workspace: /home/runner/work/mmm-matrix/mmm-matrix
+  action: generate
+  event_path: /home/runner/work/_temp/_github_workflow/event.json
+  action_repository: ""
+  action_ref: ""
+  path: /home/runner/work/_temp/_runner_file_commands/add_path_8c8137cf-e887-4c03-9b23-4864d06aab5f
+  env: /home/runner/work/_temp/_runner_file_commands/set_env_8c8137cf-e887-4c03-9b23-4864d06aab5f
+  step_summary: /home/runner/work/_temp/_runner_file_commands/step_summary_8c8137cf-e887-4c03-9b23-4864d06aab5f
+  state: /home/runner/work/_temp/_runner_file_commands/save_state_8c8137cf-e887-4c03-9b23-4864d06aab5f
+  output: /home/runner/work/_temp/_runner_file_commands/set_output_8c8137cf-e887-4c03-9b23-4864d06aab5f

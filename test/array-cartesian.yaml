@@ -1,9 +1,11 @@
-$multiply:
-  - - with-config: a
+$arrays:
+  0:
+    - with-config: a
       mode: debug
     - with-config: b
       mode: release
-  - - os: linux
+  1:
+    - os: linux
       job: job-a
     - os: mac
       job: job-b

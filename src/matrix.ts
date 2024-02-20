@@ -1,7 +1,16 @@
 const ifKey = "$if";
 const valueKey = "$value";
 const dynamicKey = "$dynamic";
-const multiplyKey = "$multiply";
+const arrayKey = "$array";
+const arraysKey = "$arrays";
+
+export enum Verbosity {
+  Normal,
+  Detailed,
+  Debugging,
+}
+
+let verbosity = Verbosity.Normal;
 
 type OutputRecord = Record<string, OutputValue> & IfStatement;
 type OutputValue = string | boolean | { [dynamicKey]: string };
@@ -10,7 +19,8 @@ type IfStatement = { [ifKey]?: string | string[] };
 // deno-lint-ignore no-explicit-any
 type InputRecord = boolean | string | any[] | InputObject;
 type InputObject = { [key: string]: InputRecord } & {
-  [multiplyKey]?: InputRecord[];
+  [arrayKey]?: InputRecord[];
+  [arraysKey]?: InputRecord[][] | { [key: string]: InputRecord[] };
 };
 type InputValue = { [valueKey]: string | boolean } | { [dynamicKey]: string };
 
@@ -42,6 +52,12 @@ function isDynamicObject(
 ): input is { [dynamicKey]: string } {
   return input !== null && input !== undefined && typeof input == "object" &&
     dynamicKey in input;
+}
+
+function isArraysObject(
+  input: InputRecord,
+): input is { [key: string]: InputRecord[] } {
+  return input !== null && input !== undefined && typeof input == "object";
 }
 
 function arrayify(s?: string | string[]): string[] {
@@ -95,9 +111,16 @@ function removeKey(object: Record<string, any>, key: string): any {
  */
 function flatten(input: InputRecord): OutputRecord[] {
   if (isArray(input)) {
-    return input.flatMap(flatten);
+    const flattened = input.flatMap(flatten);
+    if (verbosity == Verbosity.Debugging) {
+      console.debug("Flatten array:", input, "->", flattened);
+    }
+    return flattened;
   }
   if (isObject(input)) {
+    if (valueKey in input || dynamicKey in input) {
+      throw new Error("Illegal $value or $dynamic key in object context");
+    }
     const keys = Object.keys(input);
     if (keys.length == 0) {
       return [];
@@ -105,20 +128,53 @@ function flatten(input: InputRecord): OutputRecord[] {
       const outputs = [];
       // label: [a, b, c] + os: [mac, linux] = label a, os mac, label a, os linux, etc...
       for (const key of keys) {
-        if (key == multiplyKey) {
-          if (input[multiplyKey] !== undefined && isArray(input[multiplyKey])) {
+        if (key == arrayKey) {
+          if (input[arrayKey] !== undefined && isArray(input[arrayKey])) {
             const nestedOutputs = [];
-            for (const value of input[multiplyKey]) {
+            for (const value of input[arrayKey]) {
               nestedOutputs.push(flatten(value));
             }
-            outputs.push(cartesianMerge(...nestedOutputs));
+            outputs.push(nestedOutputs.flat(1));
           } else {
             throw new Error(
-              `Unexpected value for '$multiply': ${typeof input} (expected an array)`,
+              `Unexpected value for '$array': ${typeof input} (expected an array)`,
+            );
+          }
+        } else if (key == arraysKey) {
+          let value = input[arraysKey];
+          if (value !== undefined && isArraysObject(value)) {
+            const objectAsArray = [];
+            for (const key of Object.keys(value)) {
+              objectAsArray[Number(key)] = value[key];
+            }
+            value = objectAsArray;
+          }
+          if (value !== undefined && isArray(value)) {
+            for (const array of value) {
+              const nestedOutputs = [];
+              for (const value of array) {
+                nestedOutputs.push(flatten(value));
+              }
+              outputs.push(nestedOutputs.flat(1));
+            }
+          } else {
+            throw new Error(
+              `Unexpected value for '$arrays': ${typeof input} (expected an array or an object with numbered keys)`,
             );
           }
         } else {
-          outputs.push(flattenWithKeyInput(key, input[key]));
+          const flattened = flattenWithKeyInput(key, input[key]);
+          if (verbosity == Verbosity.Debugging) {
+            console.debug(
+              "Flatten with key:",
+              key,
+              "=",
+              input[key],
+              "->",
+              flattened,
+            );
+          }
+          outputs.push(flattened);
         }
       }
 
@@ -168,7 +224,7 @@ function flattenWithKeyInput(key: string, input: InputRecord): OutputRecord[] {
     }
     if (outputs.length == 0) {
       throw new Error(
-        `Object in object value context for '${key}' must at least one key`,
+        `Object in object value context for '${key}' must have at least one key`,
       );
     }
     return outputs.flat(1);
@@ -219,6 +275,14 @@ function filterRecord(config: any, record: OutputRecord): boolean {
       // NOTE: This is an `eval` call!
       const fn = makeBindingFunction(predicate, record);
       if (!fn(config)) {
+        if (verbosity >= Verbosity.Debugging) {
+          console.debug(
+            "Removing because predicate",
+            predicate,
+            "failed:",
+            record,
+          );
+        }
         return false;
       }
     }
@@ -261,8 +325,14 @@ export function generateMatrix(input: any, config: any): OutputRecord[] {
     throw new Error("Top-level input must be an array or object");
   }
   const flattened = flatten(input);
+  if (verbosity >= Verbosity.Detailed) {
+    console.info("Flattened:", flattened);
+  }
   const evaluated = flattened.filter((record) => filterRecord(config, record))
     .map((x) => <OutputRecord> JSON.parse(JSON.stringify(x)));
+  if (verbosity >= Verbosity.Detailed) {
+    console.info("Evaluated:", evaluated);
+  }
 
   // This is O(n^2) but hopefully we don't ever hit that complexity. If we do, we'll probably
   // need to use indexes.
@@ -282,4 +352,8 @@ export function generateMatrix(input: any, config: any): OutputRecord[] {
   }
 
   return merged;
+}
+
+export function setVerbosity(verbosity_: Verbosity) {
+  verbosity = verbosity_;
 }

@@ -1,0 +1,8 @@
+$array:
+  - option: a
+    $if: "true"
+  - option: b
+    $if: "false"
+  - option: c
+    $if: "true"
+plus-key: a

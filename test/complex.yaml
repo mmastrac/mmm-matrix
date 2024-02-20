@@ -1,0 +1,21 @@
+$array:
+  - $if: "config.isTag"
+    label:
+      linux:
+        job: [publish]
+  - $if: "config.isFastBuild"
+    label:
+      linux:
+        job: [build, test]
+  - $if: "config.isMain || (config.isPR && !config.isFastBuild)"
+    label:
+      linux:
+        job: [check, build, test, test-full]
+      macos:
+        job: [check, build, test]
+      windows:
+        job: [check, build, test]
+# OS is looked up via the config
+os:
+  $dynamic: config.osFree[this.label]
+$if: "!config.isFork"

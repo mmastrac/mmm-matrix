@@ -1,11 +1,16 @@
 import YAML from "npm:yaml";
 import { printUnifiedDiff } from "npm:print-diff";
-import { generateMatrix } from "../src/matrix.ts";
+import { generateMatrix, setVerbosity, Verbosity } from "../src/matrix.ts";
 
 import {
   assertEquals,
   fail,
 } from "https://deno.land/std@0.214.0/assert/mod.ts";
+
+let verbosity = Verbosity.Normal;
+if (Deno.env.get("VERBOSE") == "debug") {
+  setVerbosity(verbosity = Verbosity.Debugging);
+}
 
 Deno.chdir(new URL("./", import.meta.url));
 
@@ -27,7 +32,7 @@ for (const name of files) {
       `${test}`,
       format,
       `${name}`,
-      `${base}.config.json`,
+      `${base}.config`,
       true,
     ),
   );
@@ -51,7 +56,7 @@ for (const name of errorFiles) {
       `${test}`,
       format,
       `${name}`,
-      `${base}.config.json`,
+      `${base}.config`,
       false,
     ),
   );
@@ -79,6 +84,14 @@ function findTest(
   return { format, test };
 }
 
+function exists(file: string): boolean {
+  try {
+    return Deno.statSync(file).isFile;
+  } catch {
+    return false;
+  }
+}
+
 function generateTestFunction(
   inputFile: string,
   format: "JSON" | "JSONC" | "YAML",
@@ -86,13 +99,24 @@ function generateTestFunction(
   configFile: string,
   success: boolean,
 ) {
-  let configText = "{}";
-  try {
-    configText = Deno.readTextFileSync(configFile);
-  } catch {
-    /* pass */
+  let config = {};
+
+  if (exists(configFile + ".json")) {
+    const configText = Deno.readTextFileSync(configFile + ".json");
+    config = JSON.parse(configText);
+    if (verbosity >= Verbosity.Debugging) {
+      console.log("Config:", config);
+    }
   }
-  const config = JSON.parse(configText);
+
+  if (exists(configFile + ".yaml")) {
+    const configText = Deno.readTextFileSync(configFile + ".yaml");
+    config = YAML.parse(configText);
+    if (verbosity >= Verbosity.Debugging) {
+      console.log("Config:", config);
+    }
+  }
+
   const output = YAML.parse(Deno.readTextFileSync(outputFile));
   const inputText = Deno.readTextFileSync(inputFile);
   const input = format == "JSON"

@@ -1,0 +1,67 @@
+name: multi-matrix
+on:
+  - push
+  - pull_request
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.generate.outputs.matrix }}
+    steps:
+      - name: Run the built action
+        id: generate
+        uses: mmastrac/mmm-matrix@v1
+        with:
+          default: |
+            - label: linux
+              os: ubuntu-latest
+              job: nop
+          input: |
+            $array:
+              - $if: "config.isTag"
+                label:
+                  linux:
+                    job: [publish]
+              - $if: "config.isFastBuild"
+                label:
+                  linux:
+                    job: [build, test]
+              - $if: "config.isMain || (config.isPR && !config.isFastBuild)"
+                label:
+                  linux:
+                    job: [check, build, test, test-full]
+                  macos:
+                    job: [check, build, test]
+                  windows:
+                    job: [check, build, test]
+            # OS is looked up via the config
+            os:
+              $dynamic: config.osFree[this.label]
+            $if: "!config.isFork"
+          config: |
+            github: ${{ toJSON(github) }}
+            osFree:
+              linux: ubuntu-latest
+              macos: macOS-latest
+              windows: windows-2019
+            osLarge:
+              linux: ubuntu-paid-xl
+              mac: mac-paid-xl
+              windows: windows-paid-xl
+            isFork: ${{ github.event.repository.fork || false }}
+            isMain: ${{ github.ref == 'refs/heads/main' }}
+            isPR: ${{ github.event_name == 'pull_request' && github.event.action == 'synchronize' }}
+            isFastBuild: ${{ contains(github.event.pull_request.labels.*.name, 'fast-build') }}
+            isTag: ${{ startsWith(github.ref, 'refs/tags/') }}
+
+  matrix:
+    name: ${{ matrix.label }} / ${{ matrix.job }}
+    needs: generate-matrix
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.generate-matrix.outputs.matrix) }}
+    steps:
+      - name: Print matrix
+        run: "echo '${{ toJSON(matrix) }}'"
