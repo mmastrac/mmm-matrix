@@ -230,6 +230,15 @@ $match:
     jobs: [a]
 ```
 
+`match` may also be specified in a value context:
+
+```yaml
+job:
+  $match:
+    "config.os == 'linux'": [a, b, c]
+    "config.os == 'mac'": [a]
+```
+
 ### `$dynamic`
 
 Adding the special `$dynamic` key to an object adds a value that is evaluated

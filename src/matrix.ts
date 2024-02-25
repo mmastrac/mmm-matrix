@@ -233,7 +233,36 @@ function flattenWithKeyInput(
     return input.map((input) => flattenWithKeyInput(key, input)).flat(1);
   }
 
+  const outputs = [];
+
   if (isObject(input)) {
+    const matchValue = removeKey(input, matchKey);
+    if (matchValue !== undefined) {
+      const flattened = flatten(input);
+      if (isMatchObject(matchValue)) {
+        const ifAccum = [];
+        const nestedOutputs: OutputRecord[][] = [];
+        // Push a set for all cases of this $match, adding a negation for previous cases
+        for (const caseKey of Object.keys(matchValue)) {
+          const condition = structuredClone(ifAccum);
+          condition.push(caseKey);
+          ifAccum.push(`!(${caseKey})`);
+
+          const output = flattenWithKeyInput(key, matchValue[caseKey]);
+          outputs.push(
+            cartesianMerge(output, flattened, [{ [ifSymbol]: condition }]),
+          );
+        }
+        // Finally, push an empty set if all items failed
+        nestedOutputs.push([{ [ifSymbol]: ifAccum }]);
+      } else {
+        throw new Error(
+          `Unexpected value for '$match': ${typeof input} (expected an object)`,
+        );
+      }
+      return outputs.flat(1);
+    }
+
     const dynamicValue = removeKey(input, dynamicKey);
     if (dynamicValue !== undefined) {
       if (typeof dynamicValue == "string") {
@@ -255,7 +284,6 @@ function flattenWithKeyInput(
       return cartesianMerge(output, flatten(input));
     }
 
-    const outputs = [];
     for (const nestedValue of Object.keys(input)) {
       const value: OutputRecord = { [key]: nestedValue };
       outputs.push(cartesianMerge([value], flatten(input[nestedValue])));

@@ -1,0 +1,6 @@
+job:
+  $match:
+    "config.setting == 1": [a, b]
+    "config.setting == 2": [a, b, c]
+    "true": c
+  $if: "!config.disabled"
