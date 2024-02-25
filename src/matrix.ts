@@ -1,8 +1,13 @@
 const ifKey = "$if";
+const matchKey = "$match";
 const valueKey = "$value";
 const dynamicKey = "$dynamic";
 const arrayKey = "$array";
 const arraysKey = "$arrays";
+
+// Workaround for https://github.com/microsoft/TypeScript/issues/17867
+// deno-lint-ignore no-explicit-any
+const ifSymbol: unique symbol = ifKey as any;
 
 export enum Verbosity {
   Normal,
@@ -12,9 +17,9 @@ export enum Verbosity {
 
 let verbosity = Verbosity.Normal;
 
-type OutputRecord = Record<string, OutputValue> & IfStatement;
 type OutputValue = string | boolean | { [dynamicKey]: string };
-type IfStatement = { [ifKey]?: string | string[] };
+type IfValue = string | string[];
+type OutputRecord = { [key: string]: OutputValue; [ifSymbol]?: IfValue };
 
 // deno-lint-ignore no-explicit-any
 type InputRecord = boolean | string | any[] | InputObject;
@@ -60,7 +65,13 @@ function isArraysObject(
   return input !== null && input !== undefined && typeof input == "object";
 }
 
-function arrayify(s?: string | string[]): string[] {
+function isMatchObject(
+  input: InputRecord,
+): input is { [key: string]: InputRecord | InputRecord[] } {
+  return input !== null && input !== undefined && typeof input == "object";
+}
+
+function arrayify(s?: IfValue): string[] {
   if (s === undefined) {
     return [];
   }
@@ -75,7 +86,7 @@ function mergeIf(target: OutputRecord, ifStatement?: string | string[]) {
     return;
   }
 
-  target[ifKey] = arrayify(target[ifKey]).concat(arrayify(ifStatement));
+  target[ifSymbol] = arrayify(target[ifSymbol]).concat(arrayify(ifStatement));
 }
 
 function merge(partials: OutputRecord[]): OutputRecord {
@@ -128,7 +139,31 @@ function flatten(input: InputRecord): OutputRecord[] {
       const outputs = [];
       // label: [a, b, c] + os: [mac, linux] = label a, os mac, label a, os linux, etc...
       for (const key of keys) {
-        if (key == arrayKey) {
+        if (key == matchKey) {
+          const matchObj = input[matchKey];
+          if (isMatchObject(matchObj)) {
+            const keys = Object.keys(matchObj);
+            const ifAccum = [];
+            const nestedOutputs: OutputRecord[][] = [];
+            // Push a set for all cases of this $match, adding a negation for previous cases
+            for (const key of keys) {
+              const condition = structuredClone(ifAccum);
+              condition.push(key);
+              ifAccum.push(`!(${key})`);
+              const caseObj = flatten(matchObj[key]);
+              nestedOutputs.push(
+                cartesianMerge(caseObj, [{ [ifSymbol]: condition }]),
+              );
+            }
+            // Finally, push an empty set if all items failed
+            nestedOutputs.push([{ [ifSymbol]: ifAccum }]);
+            outputs.push(nestedOutputs.flat(1));
+          } else {
+            throw new Error(
+              `Unexpected value for '$match': ${typeof input} (expected an object)`,
+            );
+          }
+        } else if (key == arrayKey) {
           if (input[arrayKey] !== undefined && isArray(input[arrayKey])) {
             const nestedOutputs = [];
             for (const value of input[arrayKey]) {
@@ -186,7 +221,10 @@ function flatten(input: InputRecord): OutputRecord[] {
   );
 }
 
-function flattenWithKeyInput(key: string, input: InputRecord): OutputRecord[] {
+function flattenWithKeyInput(
+  key: Exclude<string, typeof ifKey>,
+  input: InputRecord,
+): OutputRecord[] {
   if (typeof input == "string" || typeof input == "boolean") {
     return [{ [key]: input }];
   }

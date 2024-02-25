@@ -7,6 +7,8 @@ import {
   fail,
 } from "https://deno.land/std@0.214.0/assert/mod.ts";
 
+type Format = "JSON" | "JSONC" | "YAML";
+
 let verbosity = Verbosity.Normal;
 if (Deno.env.get("VERBOSE") == "debug") {
   setVerbosity(verbosity = Verbosity.Debugging);
@@ -20,21 +22,43 @@ const files = new Set(
     .map((f) => f.name),
 );
 
+function getTestFileType(
+  file: string,
+): { base: string; format: Format } | undefined {
+  let format: Format;
+  let base;
+  if (file.endsWith(".yaml")) {
+    format = "YAML";
+    base = file.replaceAll(".yaml", "");
+  } else if (file.endsWith(".json")) {
+    format = "JSON";
+    base = file.replaceAll(".json", "");
+  } else if (file.endsWith(".jsonc")) {
+    format = "JSONC";
+    base = file.replaceAll(".jsonc", "");
+  } else {
+    return undefined;
+  }
+
+  if (base.endsWith(".out") || base.endsWith(".config")) {
+    return undefined;
+  }
+
+  return { base, format };
+}
+
 for (const name of files) {
-  if (!name.endsWith("out.yaml")) {
+  const test = getTestFileType(name);
+  if (test === undefined) {
     continue;
   }
-  const base = name.replaceAll(".out.yaml", "");
-  const { format, test } = findTest(files, base);
-  Deno.test(
-    { name: `${base} (${format})` },
-    generateTestFunction(
-      `${test}`,
-      format,
-      `${name}`,
-      `${base}.config`,
-      true,
-    ),
+
+  generateTestFunction(
+    files,
+    `${test.base}`,
+    test.format,
+    `${test.base}`,
+    true,
   );
 }
 
@@ -45,87 +69,81 @@ const errorFiles = new Set(
 );
 
 for (const name of errorFiles) {
-  if (!name.endsWith("out.yaml")) {
+  const test = getTestFileType(name);
+  if (test === undefined) {
     continue;
   }
-  const base = name.replaceAll(".out.yaml", "");
-  const { format, test } = findTest(errorFiles, base);
-  Deno.test(
-    { name: `error ${base} (${format})` },
-    generateTestFunction(
-      `${test}`,
-      format,
-      `${name}`,
-      `${base}.config`,
-      false,
-    ),
+
+  generateTestFunction(
+    errorFiles,
+    `${test.base}`,
+    test.format,
+    `${test.base}`,
+    false,
   );
 }
 
 function findTest(
   files: Set<string>,
-  base: string,
-): { format: "JSON" | "JSONC" | "YAML"; test: string } {
-  let test, format: "JSON" | "JSONC" | "YAML";
+  test: string,
+): { format: Format; test: string } | undefined {
+  let format: Format;
 
-  test = `${base}.json`;
   format = "JSON";
-  if (!files.has(test)) {
-    test = `${base}.jsonc`;
+  if (!files.has(`${test}.json`)) {
     format = "JSONC";
-    if (!files.has(test)) {
-      test = `${base}.yaml`;
+    if (!files.has(`${test}.jsonc`)) {
       format = "YAML";
-      if (!files.has(test)) {
-        throw `Missing input file for ${base}`;
+      if (!files.has(`${test}.yaml`)) {
+        return undefined;
       }
     }
   }
   return { format, test };
 }
 
-function exists(file: string): boolean {
-  try {
-    return Deno.statSync(file).isFile;
-  } catch {
-    return false;
-  }
+function loadTest(file: string, format: Format) {
+  const inputText = Deno.readTextFileSync(`${file}.${format.toLowerCase()}`);
+  return format == "JSON"
+    ? JSON.parse(inputText)
+    : (format == "JSONC" ? eval(`(${inputText})`) : YAML.parse(inputText));
 }
 
 function generateTestFunction(
+  files: Set<string>,
   inputFile: string,
-  format: "JSON" | "JSONC" | "YAML",
-  outputFile: string,
-  configFile: string,
+  format: Format,
+  base: string,
   success: boolean,
 ) {
+  if (findTest(files, `${base}-1.config`) !== undefined) {
+    for (let i = 1; findTest(files, `${base}-${i}.config`); i++) {
+      generateTestFunction(files, inputFile, format, `${base}-${i}`, success);
+    }
+    return;
+  }
+
+  const configFile = findTest(files, `${base}.config`);
   let config = {};
-
-  if (exists(configFile + ".json")) {
-    const configText = Deno.readTextFileSync(configFile + ".json");
-    config = JSON.parse(configText);
+  if (configFile !== undefined) {
+    config = loadTest(configFile.test, configFile.format);
     if (verbosity >= Verbosity.Debugging) {
       console.log("Config:", config);
     }
   }
 
-  if (exists(configFile + ".yaml")) {
-    const configText = Deno.readTextFileSync(configFile + ".yaml");
-    config = YAML.parse(configText);
-    if (verbosity >= Verbosity.Debugging) {
-      console.log("Config:", config);
-    }
+  const outputFile = findTest(files, `${base}.out`);
+  if (outputFile === undefined) {
+    throw new Error(`Missing output file for ${base}`);
   }
+  const output = loadTest(outputFile.test, outputFile.format);
 
-  const output = YAML.parse(Deno.readTextFileSync(outputFile));
-  const inputText = Deno.readTextFileSync(inputFile);
-  const input = format == "JSON"
-    ? JSON.parse(inputText)
-    : (format == "JSONC" ? eval(`(${inputText})`) : YAML.parse(inputText));
+  const input = loadTest(inputFile, format);
 
-  return () => {
-    (success ? testGenerate : testGenerateError)(input, config, output);
-  };
+  Deno.test(
+    { name: `${success ? "" : "error "}${base} (${format})` },
+    () => (success ? testGenerate : testGenerateError)(input, config, output),
+  );
 }
 
 // deno-lint-ignore no-explicit-any

@@ -176,7 +176,7 @@ os: [linux, windows, mac]
 
 # Becomes
 
-os: [linux, windows, { "$value": "mac", arm: [true, false] }
+os: [linux, windows, { "$value": "mac", arm: [true, false] }]
 
 # Results in:
 
@@ -203,6 +203,31 @@ label:
 # Results in (with `config = { distro: ubuntu }`):
 
 [{ label: linux, distro: ubuntu }]
+```
+
+### `$match`
+
+Adding the special `$match` key to an object creates a switch-like statement
+that evaluates each of its keys and returns the first matching branch:
+
+```yaml
+$match:
+  "config.os == 'linux'":
+    jobs: [a, b, c]
+  "config.os == 'mac'":
+    jobs: [a]
+```
+
+A default may be specified like so (or alternatively, by providing a `true`
+condition to `$match`):
+
+```yaml
+jobs: [a, b]
+$match:
+  "config.os == 'linux'":
+    jobs: [a, b, c]
+  "config.os == 'mac'":
+    jobs: [a]
 ```
 
 ### `$dynamic`

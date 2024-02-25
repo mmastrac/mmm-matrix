@@ -1,0 +1,4 @@
+job: c
+$match:
+  "config.setting == 1": { job: a }
+  "config.setting == 2": { job: b }
