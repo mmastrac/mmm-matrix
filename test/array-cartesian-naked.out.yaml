@@ -1,0 +1,4 @@
+- os: mac
+- os: windows
+- job: test
+- job: clean

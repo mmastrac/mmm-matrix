@@ -77,8 +77,29 @@ os: [linux, mac]
 [{ os: linux }, { os: mac }]
 ```
 
-Note that while the default mode for lists is addition, you can multiply lists
-using the advanced `$array` and `$arrays` keys, described below.
+Each of the items produced from a list is added to the output list. Note that
+while the default mode for lists is addition, you can multiply lists using the
+advanced `$array` and `$arrays` keys, described below.
+
+```yaml
+# This is almost certainly not what you want
+- os: [mac, windows]
+- job: [test, clean]
+
+# Results in:
+
+[{ os: mac }, { os: windows }, { job: test }, { job: clean }]
+
+# The correct way to get the product of mac/windows and test/clean is:
+
+$arrays:
+  - - os: [mac, windows]
+  - - job: [test, clean]
+
+# Results in
+
+[{ os: mac, job: test }, { os: mac, job: clean }, { os: windows, job: test }, ...]
+```
 
 ### Multiplication
 
