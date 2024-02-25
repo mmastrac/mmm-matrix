@@ -104,7 +104,18 @@ function merge(partials: OutputRecord[]): OutputRecord {
 }
 
 function cartesianMerge(...partials: OutputRecord[][]): OutputRecord[] {
-  return cartesian(...partials).map(merge);
+  let input;
+  if (verbosity == Verbosity.Debugging) {
+    input = structuredClone(partials);
+  }
+
+  const nonEmptyPartials = partials.filter((partial) => partial.length > 0);
+  const output = cartesian(...nonEmptyPartials).map(merge);
+  if (verbosity == Verbosity.Debugging) {
+    console.debug("Merge:", input, "->", output);
+  }
+
+  return output;
 }
 
 // deno-lint-ignore no-explicit-any
@@ -115,6 +126,33 @@ function removeKey(object: Record<string, any>, key: string): any {
 }
 
 /**
+ * Flatten an array recursively, filtering out any empty items or items
+ * that consist of nothing but an `if` key.
+ */
+function flattenArray(input: InputRecord[]): OutputRecord[] {
+  const flattened = input.flatMap(flatten);
+  if (verbosity == Verbosity.Debugging) {
+    console.debug("Flatten array:", input, "->", flattened);
+  }
+  return flattened.filter((item) => {
+    const keys = Object.keys(item);
+    if (keys.length == 0) {
+      if (verbosity == Verbosity.Debugging) {
+        console.debug("Removing item with no content", item);
+      }
+      return false;
+    }
+    if (keys.length == 1 && keys[0] == ifKey) {
+      if (verbosity == Verbosity.Debugging) {
+        console.debug("Removing item with no content", item);
+      }
+      return false;
+    }
+    return true;
+  });
+}
+
+/**
  * This can be:
  *
  *  - an array, in which we recursively flatten
@@ -122,11 +160,7 @@ function removeKey(object: Record<string, any>, key: string): any {
  */
 function flatten(input: InputRecord): OutputRecord[] {
   if (isArray(input)) {
-    const flattened = input.flatMap(flatten);
-    if (verbosity == Verbosity.Debugging) {
-      console.debug("Flatten array:", input, "->", flattened);
-    }
-    return flattened;
+    return flattenArray(input);
   }
   if (isObject(input)) {
     if (valueKey in input || dynamicKey in input) {
@@ -157,6 +191,9 @@ function flatten(input: InputRecord): OutputRecord[] {
             }
             // Finally, push an empty set if all items failed
             nestedOutputs.push([{ [ifSymbol]: ifAccum }]);
+            if (verbosity == Verbosity.Debugging) {
+              console.debug("Flattened $match:", input, "->", nestedOutputs);
+            }
             outputs.push(nestedOutputs.flat(1));
           } else {
             throw new Error(
@@ -165,11 +202,7 @@ function flatten(input: InputRecord): OutputRecord[] {
           }
         } else if (key == arrayKey) {
           if (input[arrayKey] !== undefined && isArray(input[arrayKey])) {
-            const nestedOutputs = [];
-            for (const value of input[arrayKey]) {
-              nestedOutputs.push(flatten(value));
-            }
-            outputs.push(nestedOutputs.flat(1));
+            outputs.push(flattenArray(input[arrayKey]));
           } else {
             throw new Error(
               `Unexpected value for '$array': ${typeof input} (expected an array)`,
@@ -186,11 +219,7 @@ function flatten(input: InputRecord): OutputRecord[] {
           }
           if (value !== undefined && isArray(value)) {
             for (const array of value) {
-              const nestedOutputs = [];
-              for (const value of array) {
-                nestedOutputs.push(flatten(value));
-              }
-              outputs.push(nestedOutputs.flat(1));
+              outputs.push(flattenArray(array));
             }
           } else {
             throw new Error(
@@ -241,7 +270,6 @@ function flattenWithKeyInput(
       const flattened = flatten(input);
       if (isMatchObject(matchValue)) {
         const ifAccum = [];
-        const nestedOutputs: OutputRecord[][] = [];
         // Push a set for all cases of this $match, adding a negation for previous cases
         for (const caseKey of Object.keys(matchValue)) {
           const condition = structuredClone(ifAccum);
@@ -254,7 +282,10 @@ function flattenWithKeyInput(
           );
         }
         // Finally, push an empty set if all items failed
-        nestedOutputs.push([{ [ifSymbol]: ifAccum }]);
+        outputs.push([{ [ifSymbol]: ifAccum }]);
+        if (verbosity == Verbosity.Debugging) {
+          console.debug("Flattened $match:", input, "->", outputs);
+        }
       } else {
         throw new Error(
           `Unexpected value for '$match': ${typeof input} (expected an object)`,
@@ -353,6 +384,11 @@ function filterRecord(config: any, record: OutputRecord): boolean {
       }
     }
   }
+
+  if (Object.keys(record).length == 0) {
+    return false;
+  }
+
   return true;
 }
 

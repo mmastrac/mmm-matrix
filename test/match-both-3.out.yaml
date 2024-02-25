@@ -1,0 +1,9 @@
+- label: linux
+  job: check
+  os: linux-runner
+- label: mac
+  job: check
+  os: mac-runner
+- label: windows
+  job: check
+  os: windows-runner

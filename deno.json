@@ -2,6 +2,8 @@
   "tasks": {
     "bundle": "deno run -A tools/bundle.ts && tools/test-dist.sh",
     "test": "deno test -A test/test.ts",
-    "release": "deno run -A tools/bundle.ts && tools/release.sh"
+    "release": "deno run -A tools/bundle.ts && tools/release.sh",
+    "test-action": "act -j dist",
+    "test-example": "act pull_request -e examples/multi-step-pr.json -W examples/ -C ."
   }
 }

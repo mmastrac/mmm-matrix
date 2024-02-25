@@ -9,9 +9,15 @@ jobs:
     outputs:
       matrix: ${{ steps.generate.outputs.matrix }}
     steps:
+      # These steps let us test this action with the local tree. These aren't necessary
+      # when building your matrix in CI.
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v1
+      - run: deno task bundle
+
       - name: Run the built action
         id: generate
-        uses: mmastrac/mmm-matrix@v1
+        uses: "./"
         with:
           default: |
             - label: linux
@@ -19,22 +25,20 @@ jobs:
               job: nop
           input: |
             $array:
-              - $if: "config.isTag"
-                label:
+              - label:
                   linux:
-                    job: [publish]
-              - $if: "config.isFastBuild"
-                label:
-                  linux:
-                    job: [build, test]
-              - $if: "config.isMain || (config.isPR && !config.isFastBuild)"
-                label:
-                  linux:
-                    job: [check, build, test, test-full]
-                  macos:
-                    job: [check, build, test]
-                  windows:
-                    job: [check, build, test]
+                    job:
+                      $match:
+                        "config.isTag": [publish]
+                        "config.isFastBuild": [build, test]
+                        "true": [check, build, test, test-full]
+              - $match:
+                  "config.isMain || (config.isPR && !config.isFastBuild)":
+                    label:
+                      mac:
+                        job: [check, build, test]
+                      windows:
+                        job: [check, build, test]
             # OS is looked up via the config
             os:
               $dynamic: config.osFree[this.label]

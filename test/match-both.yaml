@@ -1,0 +1,17 @@
+$array:
+  - label:
+      linux:
+        job:
+          $match:
+            "config.case == 1": [publish]
+            "config.case == 2": [build, test]
+            "true": [check]
+  - $match:
+      "config.case == 3":
+        label:
+          mac:
+            job: [check]
+          windows:
+            job: [check]
+os:
+  $dynamic: "this.label + '-runner'"

@@ -1,0 +1,6 @@
+- label: linux
+  job: build
+  os: linux-runner
+- label: linux
+  job: test
+  os: linux-runner
