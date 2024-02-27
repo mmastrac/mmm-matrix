@@ -315,9 +315,9 @@ function flattenWithKeyInput(
       return cartesianMerge(output, flatten(input));
     }
 
-    for (const nestedValue of Object.keys(input)) {
-      const value: OutputRecord = { [key]: nestedValue };
-      outputs.push(cartesianMerge([value], flatten(input[nestedValue])));
+    for (const nestedKey of Object.keys(input)) {
+      const value: OutputRecord = { [key]: nestedKey };
+      outputs.push(cartesianMerge([value], flatten(input[nestedKey])));
     }
     if (outputs.length == 0) {
       throw new Error(
