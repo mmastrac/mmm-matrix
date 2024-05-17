@@ -1,1 +1,1 @@
-"Object in object value context for 'label' must have at least one key"
+"Unexpected type in object context: 'object' (expected an object or array of objects)"
