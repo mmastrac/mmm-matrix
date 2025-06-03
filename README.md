@@ -388,7 +388,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        include: ${{ fromJSON(generate.dist.outputs.matrix) }}
+        include: ${{ fromJSON(needs.generate.outputs.matrix) }}
     steps:
       - name: Print matrix
         run: "echo '${{ toJSON(matrix) }}'"
