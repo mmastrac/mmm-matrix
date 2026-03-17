@@ -1,0 +1,10 @@
+build_task: default
+os:
+  mac:
+    sys: darwin
+  windows:
+    sys: windows
+    arch:
+      x86_64:
+      aarch64:
+        build_task: override

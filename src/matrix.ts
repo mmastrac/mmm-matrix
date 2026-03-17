@@ -110,6 +110,11 @@ function isObject(input: unknown): input is object {
   return typeof input == "object" && input !== null;
 }
 
+function friendlyTypeOf(input: unknown): string {
+  if (input === null) return "null";
+  if (input === undefined) return "undefined";
+  return typeof input;
+}
 
 function isDynamicObject(
   input: unknown,
@@ -251,7 +256,7 @@ function flatten(input: Input): OutputRecord[] {
             outputs.push(nestedOutputs.flat(1));
           } else {
             throw new Error(
-              `Unexpected value for '$match': ${typeof input} (expected an object)`,
+              `Unexpected value for '$match': ${friendlyTypeOf(input)} (expected an object)`,
             );
           }
         } else if (key == arrayKey) {
@@ -259,7 +264,7 @@ function flatten(input: Input): OutputRecord[] {
             outputs.push(flattenArray(input[arrayKey]));
           } else {
             throw new Error(
-              `Unexpected value for '$array': ${typeof input} (expected an array)`,
+              `Unexpected value for '$array': ${friendlyTypeOf(input)} (expected an array)`,
             );
           }
         } else if (key == arraysKey) {
@@ -277,7 +282,7 @@ function flatten(input: Input): OutputRecord[] {
             }
           } else {
             throw new Error(
-              `Unexpected value for '$arrays': ${typeof input} (expected an array or an object with numbered keys)`,
+              `Unexpected value for '$arrays': ${friendlyTypeOf(input)} (expected an array or an object with numbered keys)`,
             );
           }
         } else if (isRegularKey(key) || key == ifKey) {
@@ -328,7 +333,7 @@ function flatten(input: Input): OutputRecord[] {
     }
   }
   throw new Error(
-    `Unexpected type in object context: ${typeof input} (expected an object or array of objects)`,
+    `Unexpected type in object context: ${friendlyTypeOf(input)} (expected an object or array of objects)`,
   );
 }
 
@@ -349,9 +354,13 @@ function flattenNestedKeyObject(
       throw new Error(`Illegal key: ${key}`);
     }
     const value = input[nestedKey];
+    if (value === null) {
+      outputs.push([{ [key]: nestedKey }]);
+      continue;
+    }
     if (!isObject(value)) {
       throw new Error(
-        `Unexpected type in object context '${typeof value}' (expected an object or array of objects)`,
+        `Unexpected type in object context '${friendlyTypeOf(value)}' (expected an object or array of objects)`,
       );
     }
 
@@ -423,7 +432,7 @@ function flattenWithKeyInput(
     if (dynamic !== undefined) {
       if (typeof dynamic !== "string") {
         throw new Error(
-          `Unexpected type in $dynamic value context: ${typeof dynamic}`,
+          `Unexpected type in $dynamic value context: ${friendlyTypeOf(dynamic)}`,
         );
       }
       return cartesianMerge(
@@ -439,11 +448,11 @@ function flattenWithKeyInput(
     }
 
     throw new Error(
-      `Unexpected type in object context: '${typeof input}' (expected an object or array of objects)`,
+      `Unexpected type in object context: '${friendlyTypeOf(input)}' (expected an object or array of objects)`,
     );
   }
   throw new Error(
-    `Unexpected type in object value context for key '${key}': ${typeof input}`,
+    `Unexpected type in object value context for key '${key}': ${friendlyTypeOf(input)}`,
   );
 }
 
