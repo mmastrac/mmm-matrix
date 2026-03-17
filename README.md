@@ -1,40 +1,72 @@
 # mmmm: Matrix Maker for GitHub Actions
 
-`mmm-matrix` is a quick and concise way to build a dynamic GitHub Actions matrix
-that can react to different build inputs and events.
+`mmm-matrix` is a concise way to build dynamic GitHub Actions
+[matrix strategies](https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs)
+from YAML. You describe your configurations using additions and multiplications,
+and `mmm-matrix` expands them into the full set of matrix items -- with support
+for conditionals, computed values, and deduplication.
 
-## Background: GitHub Actions matrix
+If you've ever maintained a large `include:` list by hand, or tried to
+conditionally exclude a platform from a matrix depending on who triggered the
+build, you know how quickly that gets unwieldy. `mmm-matrix` replaces that with
+a small tree of YAML that reads closer to what you actually mean.
 
-A GitHub Actions matrix is a way to run a job or a set of jobs across different
-configurations. It's like setting up multiple versions of your workflow to run
-simultaneously but with slight variations in settings.
+<details>
+<summary>What's a GitHub Actions matrix?</summary>
 
-Imagine you have a test suite for your software that you want to run on
-different operating systems and with different versions of programming
-languages. Instead of creating separate workflows for each combination, you can
-define a matrix where each combination becomes a separate job run.
+A matrix lets you run the same job across multiple configurations in parallel.
+You define a few axes -- say, OS and language version -- and GitHub Actions runs
+every combination as a separate job. Three operating systems times three Python
+versions gives you nine parallel runs, without writing nine separate workflow
+entries.
 
-For example, you can specify a matrix with operating systems like Ubuntu, macOS,
-and Windows, and another dimension for programming language versions like Python
-3.7, 3.8, and 3.9. GitHub Actions will then automatically create individual job
-runs for each combination, such as running the tests on Ubuntu with Python 3.7,
-on macOS with Python 3.8, and so on.
+This is great until your matrix isn't a clean product of independent axes. Maybe
+you only want to run a subset of jobs on Windows, or you need to add an extra
+key for one specific combination. That's where `mmm-matrix` comes in.
 
-This approach helps streamline your workflow, making it easier to manage and
-ensuring consistent testing across different environments. It's especially
-useful for projects that need to support multiple platforms or configurations.
+</details>
 
-## Why `mmm-matrix`?
+## Action Configuration
 
-`mmm-matrix` solves the problem of efficiently managing and generating complex
-matrices for GitHub Actions workflows. Without `mmm-matrix`, creating and
-maintaining matrices with various configurations, such as different operating
-systems, programming languages, or versions, can be time-consuming and
-error-prone. Developers would have to manually write out all the combinations,
-leading to potential mistakes and inefficiencies. `mmm-matrix` automates this
-process, allowing users to define configurations using simple syntax and rules.
-It handles the generation of matrix items, including combinations and
-conditions, streamlining the matrix workflow setup.
+The `mmm-matrix` action is designed to be an input for a job with
+`strategy: matrix`.
+
+```yaml
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.generate.outputs.matrix }}
+    steps:
+      - id: generate
+        uses: "mmastrac/mmm-matrix@v1"
+        with:
+          input: |
+            label:
+              linux:
+                os: ubuntu-latest
+                job: [job-a, job-b, { "$value": "job-c", "$if": "config.github.actor != 'mmastrac'" }]
+                user: { "$dynamic": "config.github.actor" }
+              macos:
+                os: macOS-latest
+                job: [job-c]
+              windows:
+                os: windows-2019
+                job: [job-a]
+          config: |
+            github: ${{ toJSON(github) }}
+
+  matrix:
+    name: ${{ matrix.label }} / ${{ matrix.job }}
+    needs: generate
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.generate.outputs.matrix) }}
+    steps:
+      - name: Print matrix
+        run: "echo '${{ toJSON(matrix) }}'"
+```
 
 ## Building matrices
 
@@ -50,6 +82,46 @@ The matrix is built in three phases:
 3. Merging: any items that are equivalent to a previous item are skipped, while
    any item that is a strict superset of a previous item replaces that previous
    item.
+
+## Configuration
+
+A configuration object can be provided for every matrix builder. A convenient
+value for this is the `github`
+[context](https://docs.github.com/en/actions/learn-github-actions/contexts) for
+your workflow, which effectively contains the entire input for your workflow.
+
+```yaml
+config: |
+  github: ${{ toJSON(github) }}
+```
+
+You can also provide computed keys:
+
+```yaml
+config: |
+  github: ${{ toJSON(github) }}
+  isMainBranch: ${{ github.ref == 'refs/heads/main' }}
+  isOwner: ${{ github.actor == github.repository_owner }}
+```
+
+The configuration object is used by the special `$if` and `$dynamic` keys
+described below.
+
+### Multiplication
+
+Multiplication is done via
+[the Cartesian product](https://en.wikipedia.org/wiki/Cartesian_product) and
+happen when using JSON or YAML objects. All of the possible values of an object
+are multiplied together:
+
+```yaml
+os: [linux, mac, windows]
+test: [true, false]
+
+# Results in every combination:
+
+[{ os: linux, test: true }, { os: linux, test: false }, { os: mac, test: true }, ... ]
+```
 
 ### Addition
 
@@ -90,7 +162,8 @@ advanced `$array` and `$arrays` keys, described below.
 
 [{ os: mac }, { os: windows }, { job: test }, { job: clean }]
 
-# The correct way to get the product of mac/windows and test/clean is:
+# The correct way to get the product of mac/windows and test/clean is
+# (this could also be written as a single object: { os: [mac, windows], job: [test, clean] })
 
 $arrays:
   - - os: [mac, windows]
@@ -99,22 +172,6 @@ $arrays:
 # Results in
 
 [{ os: mac, job: test }, { os: mac, job: clean }, { os: windows, job: test }, ...]
-```
-
-### Multiplication
-
-Multiplication is done via
-[the Cartesian product](https://en.wikipedia.org/wiki/Cartesian_product) and
-happen when using JSON or YAML objects. All of the possible values of an object
-are multiplied together:
-
-```yaml
-os: [linux, mac, windows]
-test: [true, false]
-
-# Results in every combination:
-
-[{ os: linux, test: true }, { os: linux, test: false }, { os: mac, test: true }, ... ]
 ```
 
 ### Nested objects
@@ -158,51 +215,7 @@ label:
 [{ label: linux, os: ubuntu-latest, job: job-a, distro: ubuntu }, ...]
 ```
 
-## Configuration
-
-A configuration object can be provided for every matrix builder. A convenient
-value for this is the `github`
-[context](https://docs.github.com/en/actions/learn-github-actions/contexts) for
-your workflow, which effectively contains the entire input for your workflow.
-
-```yaml
-config: |
-  github: ${{ toJSON(github) }}
-```
-
-You can also provide computed keys:
-
-```yaml
-config: |
-  github: ${{ toJSON(github) }}
-  isMainBranch: ${{ github.ref == 'refs/heads/main' }}
-  isOwner: ${{ github.actor == github.repository_owner }}
-```
-
-The configuration object is used by the special `$if` and `$dynamic` keys
-described below.
-
 ## Special object keys
-
-### `$value`
-
-The `$value` key is a special key that allows you to place a nested object where
-a value would normally go.
-
-For example, if you want to add `aarch64` and `amd64` support to the `mac` `os`
-item, but not the others:
-
-```yaml
-os: [linux, windows, mac]
-
-# Becomes
-
-os: [linux, windows, { "$value": "mac", arm: [true, false] }]
-
-# Results in:
-
-[{ os: linux }, { os: windows }, { os: mac, arm: true }, { os: mac, arm: false }]
-```
 
 ### `$if`
 
@@ -224,6 +237,46 @@ label:
 # Results in (with `config = { distro: ubuntu }`):
 
 [{ label: linux, distro: ubuntu }]
+```
+
+### `$dynamic`
+
+Adding the special `$dynamic` key to an object adds a value that is evaluated
+only once the entire matrix has been built. This can be used to set the value of
+one output key to some function of the input configuration and/or other keys in
+that particular item.
+
+When the `$dynamic` condition of the matrix item is evaluated, it has access to
+a JavaScript `this` object which refers to the currently evaluated item, and a
+`config` object which refers to the `config` input to the action.
+
+```yaml
+os: { "$dynamic": "this.distro + '-latest'" }
+distro: [ubuntu, arch]
+
+# Results in:
+
+[{ os: "ubuntu-latest", distro: ubuntu }, { os: "arch-latest", distro: arch }]
+```
+
+### `$value`
+
+The `$value` key is a special key that allows you to place a nested object where
+a value would normally go.
+
+For example, if you want to add `aarch64` and `amd64` support to the `mac` `os`
+item, but not the others:
+
+```yaml
+os: [linux, windows, mac]
+
+# Becomes
+
+os: [linux, windows, { "$value": "mac", arm: [true, false] }]
+
+# Results in:
+
+[{ os: linux }, { os: windows }, { os: mac, arm: true }, { os: mac, arm: false }]
 ```
 
 ### `$match`
@@ -258,26 +311,6 @@ job:
   $match:
     "config.os == 'linux'": [a, b, c]
     "config.os == 'mac'": [a]
-```
-
-### `$dynamic`
-
-Adding the special `$dynamic` key to an object adds a value that is evaluated
-only once the entire matrix has been built. This can be used to set the value of
-one output key to some function of the input configuration and/or other keys in
-that particular item.
-
-When the `$dynamic` condition of the matrix item is evaluated, it has access to
-a JavaScript `this` object which refers to the currently evaluated item, and a
-`config` object which refers to the `config` input to the action.
-
-```yaml
-os: { "$dynamic": "this.distro + '-latest'" }
-distro: [ubuntu, arch]
-
-# Results in:
-
-[{ os: "ubuntu-latest", distro: ubuntu }, { os: "arch-latest", distro: arch }]
 ```
 
 ### `$array` and `$arrays`
@@ -350,46 +383,4 @@ For example, an item that has one extra key than another will mask the former:
 # Results in:
 
 [{ os: linux, debug: true }]
-```
-
-## Action Configuration
-
-The `mmm-matrix` action is designed to be an input for a job with
-`strategy: matrix`.
-
-```yaml
-jobs:
-  generate:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.generate.outputs.matrix }}
-    steps:
-      - id: generate
-        uses: "mmastrac/mmm-matrix@v1"
-        with:
-          input: |
-            label:
-              linux:
-                os: ubuntu-latest
-                job: [job-a, job-b, { "$value": "job-c", "$if": "config.github.actor != 'mmastrac'" }]
-                user: { "$dynamic": "config.github.actor" }
-              macos:
-                os: macOS-latest
-                job: [job-c]
-              windows:
-                os: windows-2019
-                job: [job-a]
-          config: |
-            github: ${{ toJSON(github) }}
-
-  matrix:
-    name: ${{ matrix.label }} / ${{ matrix.job }}
-    needs: generate
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include: ${{ fromJSON(needs.generate.outputs.matrix) }}
-    steps:
-      - name: Print matrix
-        run: "echo '${{ toJSON(matrix) }}'"
 ```
