@@ -1,0 +1,4 @@
+label: [linux, mac]
+os:
+  $dynamic: "this.label + '-runner'"
+  $if: "this.label != 'mac'"

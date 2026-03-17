@@ -1,0 +1,10 @@
+label:
+  $match:
+    "true":
+      linux:
+        os:
+          ubuntu
+    "false":
+      mac:
+        os:
+          macos

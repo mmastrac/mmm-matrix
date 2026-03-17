@@ -1,0 +1,4 @@
+- label: foo
+  job: a
+- label: bar
+  job: a

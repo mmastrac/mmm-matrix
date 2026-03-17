@@ -168,9 +168,9 @@ function testGenerateError(input: any, config: any, output: any) {
       "Test should not have succeeded, but it produced:" +
         YAML.stringify(output, { aliasDuplicateObjects: false }),
     );
-  } catch (e) {
+  } catch (e: unknown) {
     const expected = YAML.stringify(output, { aliasDuplicateObjects: false });
-    const actual = YAML.stringify(e.message);
+    const actual = YAML.stringify((e as Error).message);
     if (actual != expected) {
       console.error(e);
     }
