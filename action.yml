@@ -3,7 +3,7 @@ author: "Matt Mastracci (matthew@mastracci.com)"
 description: "Matrix Maker"
 
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/action.js'
 
 branding:

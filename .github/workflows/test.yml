@@ -9,7 +9,7 @@ jobs:
       matrix: ${{ steps.generate.outputs.matrix }}
     steps:
       - uses: actions/checkout@v4
-      - uses: denoland/setup-deno@v1
+      - uses: denoland/setup-deno@v2
       - run: deno task test
       - run: deno task bundle
       - name: Run the built action
@@ -26,7 +26,7 @@ jobs:
                 os: macOS-latest
                 job: [job-c]
               windows:
-                os: windows-2019
+                os: windows-latest
                 job: [job-a]
           config: |
             github: ${{ toJSON(github) }}
