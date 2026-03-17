@@ -9,18 +9,10 @@ const arrayKey = "$array";
 const arraysKey = "$arrays";
 
 // Workaround for https://github.com/microsoft/TypeScript/issues/17867
+// OutputRecord needs [key: string] + a differently-typed $if property,
+// which TS doesn't allow with string keys. A unique symbol sidesteps this.
 // deno-lint-ignore no-explicit-any
 const ifSymbol: unique symbol = ifKey as any;
-// deno-lint-ignore no-explicit-any
-const matchSymbol: unique symbol = matchKey as any;
-// deno-lint-ignore no-explicit-any
-const valueSymbol: unique symbol = valueKey as any;
-// deno-lint-ignore no-explicit-any
-const dynamicSymbol: unique symbol = dynamicKey as any;
-// deno-lint-ignore no-explicit-any
-const arraySymbol: unique symbol = arrayKey as any;
-// deno-lint-ignore no-explicit-any
-const arraysSymbol: unique symbol = arraysKey as any;
 
 export enum Verbosity {
   Normal,
@@ -34,19 +26,17 @@ type OutputValue = string | boolean | { [dynamicKey]: string };
 type IfValue = string | string[];
 type OutputRecord = { [key: string]: OutputValue; [ifSymbol]?: IfValue };
 
-// deno-lint-ignore no-explicit-any
-type InputRecord = boolean | string | any[] | InputObject;
-
 // The top-level object
 type Input = Input[] | InputObject;
 
 type InputObject = {
   [key: RegularKey]: InputObjectValue | {
     [matchKey]: MatchObject<InputObjectValue>;
+    [ifKey]?: IfValue;
   };
   [ifKey]?: string;
   [arrayKey]?: Input[] | { [key: `${number}`]: Input };
-  [arraysKey]?: Input[] | { [key: `${number}`]: Input };
+  [arraysKey]?: Input[][] | { [key: `${number}`]: Input[] };
   [matchKey]?: MatchObject<Input>;
 };
 
@@ -57,18 +47,45 @@ type InputObjectValue = InputValue | NestedInputObject | {
 // eg: the "mac: ..." in label: mac: os: osx
 type NestedInputObject = { [key: RegularKey]: Input };
 
+function isNestedInputObject(
+  input: InputObjectValue,
+): input is NestedInputObject {
+  return typeof input === "object" && !Array.isArray(input) &&
+    !(dynamicKey in input);
+}
+
 type InputValue = string | boolean | InputValue[];
 type NestedInputValue = InputValue | InputValueObject;
 
 type InputValueObject =
-  & { [key: RegularKey]: InputValue }
+  & { [key: RegularKey]: InputValue; [ifKey]?: IfValue }
   & (
-    | { [matchKey]: MatchObject<InputValue> }
-    | { [valueKey]: InputValue }
-    | { [dynamicKey]: string }
-    | Record<symbol, never>
+    | { [matchKey]?: MatchObject<InputValue> }
+    | { [valueKey]?: InputValue }
+    | { [dynamicKey]?: string }
+    | Record<string, never>
   );
 type MatchObject<T> = { [key: string]: T };
+
+type SplitValueObject<T = unknown> = {
+  match?: MatchObject<T>;
+  dynamic?: string;
+  value?: T;
+  if?: IfValue;
+  regular: { [key: string]: T };
+};
+
+function splitValueObject<T>(input: object): SplitValueObject<T> {
+  const result: SplitValueObject<T> = { regular: {} };
+  for (const [key, val] of Object.entries(input)) {
+    if (key === matchKey) result.match = val;
+    else if (key === dynamicKey) result.dynamic = val;
+    else if (key === valueKey) result.value = val;
+    else if (key === ifKey) result.if = val;
+    else result.regular[key] = val;
+  }
+  return result;
+}
 
 // https://stackoverflow.com/questions/12303989/cartesian-product-of-multiple-arrays-in-javascript
 function cartesian<T>(...arr: T[][]): T[][] {
@@ -89,18 +106,15 @@ function isArray<T>(input: T[] | object): input is T[] {
   return Array.isArray(input);
 }
 
-function isObject<T, U>(input: T | U[]): input is T {
-  return input !== null && input !== undefined && typeof input == "object";
+function isObject(input: unknown): input is object {
+  return typeof input == "object" && input !== null;
 }
 
-function isNonNull<T>(input: T | undefined): input is T {
-  return input !== null && input !== undefined && typeof input == "object";
-}
 
 function isDynamicObject(
-  input: InputRecord,
+  input: unknown,
 ): input is { [dynamicKey]: string } {
-  return input !== null && input !== undefined && typeof input == "object" &&
+  return typeof input == "object" && input !== null && !Array.isArray(input) &&
     dynamicKey in input;
 }
 
@@ -220,7 +234,7 @@ function flatten(input: Input): OutputRecord[] {
       for (const key of keys) {
         if (key == matchKey) {
           const matchObj = input[matchKey];
-          if (isNonNull(matchObj)) {
+          if (matchObj !== undefined) {
             const match = parseMatch(matchObj);
             const nestedOutputs = [];
             // Push a set for all cases of this $match, adding a negation for previous cases
@@ -250,7 +264,7 @@ function flatten(input: Input): OutputRecord[] {
           }
         } else if (key == arraysKey) {
           let value = input[arraysKey];
-          if (isNonNull(value) && !isArray(value)) {
+          if (value !== undefined && !isArray(value)) {
             const objectAsArray = [];
             for (const key of Object.keys(value)) {
               objectAsArray[Number(key)] = value[<`${number}`> key];
@@ -271,19 +285,39 @@ function flatten(input: Input): OutputRecord[] {
           if (nested === undefined) {
             throw new Error("'undefined' is not a valid value");
           }
-          if (typeof nested == "object" && matchKey in nested) {
-            const match = parseMatch(nested);
-          } else {
-            if (
-              typeof nested == "object" &&
-              (dynamicSymbol in nested || matchKey in nested)
-            ) {
-              outputs.push(flattenWithKeyInput(key, nested));
-            } else if (typeof nested == "object" && !Array.isArray(nested)) {
-              outputs.push(flattenNestedKeyObject(key, nested));
-            } else if (nested !== undefined) {
-              outputs.push(flattenWithKeyInput(key, nested));
+          if (typeof nested == "object" && !Array.isArray(nested)) {
+            const { match: matchObj, dynamic, if: ifValue, regular } =
+              splitValueObject<InputObjectValue>(nested);
+            const ifParts = ifValue !== undefined
+              ? [{ [ifSymbol]: ifValue }]
+              : [];
+            if (matchObj) {
+              const match = parseMatch(matchObj);
+              const nestedOutputs = [];
+              for (const { condition, output: caseValue } of match.cases) {
+                const caseOutputs = isNestedInputObject(caseValue)
+                  ? flattenNestedKeyObject(key, caseValue)
+                  : flattenWithKeyInput(key, caseValue);
+                nestedOutputs.push(
+                  cartesianMerge(caseOutputs, [{ [ifSymbol]: condition }], ifParts),
+                );
+              }
+              nestedOutputs.push(cartesianMerge([{ [ifSymbol]: match.default }], ifParts));
+              outputs.push(nestedOutputs.flat(1));
+            } else if (dynamic !== undefined) {
+              outputs.push(
+                cartesianMerge([{ [key]: { [dynamicKey]: dynamic } }], ifParts),
+              );
+            } else {
+              outputs.push(
+                cartesianMerge(
+                  flattenNestedKeyObject(key, regular as NestedInputObject),
+                  ifParts,
+                ),
+              );
             }
+          } else if (nested !== undefined) {
+            outputs.push(flattenWithKeyInput(key, nested));
           }
         } else {
           throw new Error(`Illegal key: ${key}`);
@@ -343,7 +377,7 @@ function flattenNestedKeyObject(
  * `{ os: [mac, linux] }`, the key would be `os` and the input would be `[mac, linux]`.
  */
 function flattenWithKeyInput(
-  key: Exclude<string, typeof ifKey>,
+  key: string,
   input: NestedInputValue,
 ): OutputRecord[] {
   if (typeof input == "string" || typeof input == "boolean") {
@@ -355,95 +389,55 @@ function flattenWithKeyInput(
   }
 
   if (isObject(input)) {
-    // This can be:
-    //  - { $match: ..., ...other }
-    //  - { $value: ..., ...other }
-    //  - { $dynamic: ..., ...other }
-    let matchValue;
-    if (matchSymbol in input) {
-      matchValue = input[matchSymbol];
-      delete input[matchSymbol];
-    }
-    let dynamicValue;
-    if (dynamicSymbol in input) {
-      dynamicValue = input[dynamicSymbol];
-      delete input[dynamicSymbol];
-    }
-    let valueValue;
-    if (valueSymbol in input) {
-      valueValue = input[valueSymbol];
-      delete input[valueSymbol];
-    }
+    const { match, dynamic, value, if: ifValue, regular } =
+      splitValueObject<InputValue>(input);
 
-    if (matchValue) {
+    const ifParts = ifValue !== undefined
+      ? [{ [ifSymbol]: ifValue }]
+      : [];
+
+    const flattened = Object.keys(regular).flatMap((k) =>
+      flattenWithKeyInput(k, regular[k])
+    );
+
+    if (match) {
       const outputs = [];
-      for (const nestedKey of Object.keys(input)) {
-        outputs.push(flattenWithKeyInput(nestedKey, input[nestedKey]));
-      }
-      const flattened = outputs.flat(1);
+      const ifAccum: string[] = [];
+      for (const caseKey of Object.keys(match)) {
+        const condition = structuredClone(ifAccum);
+        condition.push(caseKey);
+        ifAccum.push(`!(${caseKey})`);
 
-      if (isNonNull(matchValue)) {
-        const ifAccum = [];
-        // Push a set for all cases of this $match, adding a negation for previous cases
-        for (const caseKey of Object.keys(matchValue)) {
-          const condition = structuredClone(ifAccum);
-          condition.push(caseKey);
-          ifAccum.push(`!(${caseKey})`);
-
-          const output = flattenWithKeyInput(key, matchValue[caseKey]);
-          outputs.push(
-            cartesianMerge(output, flattened, [{ [ifSymbol]: condition }]),
-          );
-        }
-        // Finally, push an empty set if all items failed
-        outputs.push([{ [ifSymbol]: ifAccum }]);
-        if (verbosity == Verbosity.Debugging) {
-          console.debug("Flattened $match:", input, "->", outputs);
-        }
-        return outputs.flat(1);
-      } else {
-        throw new Error(
-          `Unexpected value for '$match': ${typeof input} (expected an object)`,
+        const output = flattenWithKeyInput(key, match[caseKey]);
+        outputs.push(
+          cartesianMerge(output, flattened, [{ [ifSymbol]: condition }]),
         );
       }
+      outputs.push([{ [ifSymbol]: ifAccum }]);
+      if (verbosity == Verbosity.Debugging) {
+        console.debug("Flattened $match:", input, "->", outputs);
+      }
+      return cartesianMerge(outputs.flat(1), ifParts);
     }
 
-    if (dynamicValue) {
-      const outputs = [];
-      for (const nestedKey of Object.keys(input)) {
-        outputs.push(flattenWithKeyInput(nestedKey, input[nestedKey]));
+    if (dynamic !== undefined) {
+      if (typeof dynamic !== "string") {
+        throw new Error(
+          `Unexpected type in $dynamic value context: ${typeof dynamic}`,
+        );
       }
-      const flattened = outputs.flat(1);
-
-      if (dynamicValue !== undefined) {
-        if (typeof dynamicValue == "string") {
-          if (Object.keys(input).length == 0) {
-            return [{ [key]: { [dynamicKey]: dynamicValue } }];
-          }
-          const output = flattenWithKeyInput(key, {
-            [dynamicKey]: dynamicValue,
-          });
-          return cartesianMerge(output, flattened);
-        } else {
-          throw new Error(
-            `Unexpected type in $dynamic value context: ${typeof input}`,
-          );
-        }
-      }
+      return cartesianMerge(
+        [{ [key]: { [dynamicKey]: dynamic } }],
+        flattened,
+        ifParts,
+      );
     }
 
-    if (valueValue) {
-      const outputs = [];
-      for (const nestedKey of Object.keys(input)) {
-        outputs.push(flattenWithKeyInput(nestedKey, input[nestedKey]));
-      }
-      const flattened = outputs.flat(1);
-
-      if (valueValue !== undefined) {
-        const output = flattenWithKeyInput(key, valueValue);
-        return cartesianMerge(output, flattened);
-      }
+    if (value !== undefined) {
+      const output = flattenWithKeyInput(key, value);
+      return cartesianMerge(output, flattened, ifParts);
     }
+
     throw new Error(
       `Unexpected type in object context: '${typeof input}' (expected an object or array of objects)`,
     );
@@ -545,7 +539,7 @@ function itemShouldMaskPrevious(
 }
 
 // deno-lint-ignore no-explicit-any
-export function generateMatrix(input: any, config: any): OutputRecord[] {
+export function generateMatrix(input: Input, config: any): OutputRecord[] {
   if (!isObject(input) && !isArray(input)) {
     throw new Error("Top-level input must be an array or object");
   }

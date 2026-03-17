@@ -1,0 +1,6 @@
+label:
+  linux:
+    os: ubuntu
+  mac:
+    os: macos
+  $if: "this.label != 'mac'"

@@ -1,0 +1,5 @@
+label: [foo, bar]
+job:
+  $match:
+    "config.x == 1": a
+    "config.x == 2": b
