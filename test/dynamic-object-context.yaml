@@ -1,0 +1,3 @@
+label:
+  $dynamic: "this.os + '-build'"
+  os: [linux, mac]

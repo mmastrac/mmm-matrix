@@ -68,3 +68,7 @@ export function isRegularKey(key: string): key is RegularKey {
   return LETTER_REGEXP.test(key[0]);
 }
 const LETTER_REGEXP = /[a-zA-Z0-9_]/;
+
+export function isSpecialKey(key: string): boolean {
+  return key.startsWith("$");
+}

@@ -290,6 +290,9 @@ label:
 [{ label: linux, distro: ubuntu }]
 ```
 
+> NOTE: `$if` evaluates JavaScript expressions at runtime. Use
+> care when evaluating untrusted input.
+
 ### `$dynamic`
 
 Adding the special `$dynamic` key to an object adds a value that is evaluated
@@ -309,6 +312,9 @@ distro: [ubuntu, arch]
 
 [{ os: "ubuntu-latest", distro: ubuntu }, { os: "arch-latest", distro: arch }]
 ```
+
+> NOTE: `$dynamic` evaluates JavaScript expressions at runtime. Use
+> care when evaluating untrusted input.
 
 ### `$value`
 
@@ -343,8 +349,9 @@ $match:
     jobs: [a]
 ```
 
-A default may be specified like so (or alternatively, by providing a `true`
-condition to `$match`):
+If no branch matches, the `$match` contributes nothing. Sibling keys outside
+`$match` always apply, so they act as defaults that a matching branch can
+override:
 
 ```yaml
 jobs: [a, b]
@@ -353,15 +360,38 @@ $match:
     jobs: [a, b, c]
   "config.os == 'mac'":
     jobs: [a]
+
+# With config.os == 'linux':  jobs is [a, b, c]
+# With config.os == 'freebsd': jobs is [a, b] (no branch matched, default applies)
 ```
 
-`match` may also be specified in a value context:
+The expression `true` may also be used as an explicit fallback:
 
 ```yaml
+$match:
+  "config.os == 'linux'":
+    jobs: [a, b, c]
+  "config.os == 'mac'":
+    jobs: [a]
+  "true":
+    jobs: [a, b]
+
+# With config.os == 'linux':  jobs is [a, b, c]
+# With config.os == 'freebsd': jobs is [a, b] (no branch matched, default applies)
+```
+
+`$match` may also be specified in a value context. If no match branch applies,
+the parent key will not be contributed:
+
+```yaml
+os: { $dynamic: "config.os" }
 job:
   $match:
     "config.os == 'linux'": [a, b, c]
     "config.os == 'mac'": [a]
+
+# With config.os == 'linux', three records are created
+# With config.os == 'freebsd', one record is created: [ { "os": "freebsd" } ]
 ```
 
 ### `$array` and `$arrays`
@@ -419,12 +449,32 @@ $arrays:
 [{ with-config: a, mode: debug, os: linux, job: job-a }, { with-config: b, mode: release, os: linux, job: job-a }, ...]
 ```
 
-## Merging
+## Key Masking
+
+When the same key appears at multiple levels, the deeper value wins. This
+lets you set a default and override it for specific items:
+
+```yaml
+runner: { "$dynamic": "this.os + '-runner'" }
+os:
+  linux: ~
+  mac: ~
+  windows:
+    runner: windows-98
+
+# Results in:
+
+[{ os: linux, runner: linux-runner }, { os: mac, runner: mac-runner }, { os: windows, runner: windows-98 }]
+```
+
+## Output Merging
 
 Any items that are equivalent to a previous item are skipped, while any item
-that is a strict superset of a previous item replaces that previous item.
+that is a strict superset of a previous item replaces that previous item. If two items
+have partial overlap, but are disjoint, both will be emitted.
 
-For example, an item that has one extra key than another will mask the former:
+For example, an item that has one extra key than another will cause the former
+item to be omitted:
 
 ```yaml
 - os: linux

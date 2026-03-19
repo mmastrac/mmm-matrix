@@ -1,0 +1,4 @@
+- label: linux-build
+  os: linux
+- label: mac-build
+  os: mac

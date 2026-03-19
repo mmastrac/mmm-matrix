@@ -1,0 +1,3 @@
+os:
+  $dynamic: "this.label"
+  $value: linux

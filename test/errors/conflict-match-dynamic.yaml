@@ -1,0 +1,4 @@
+os:
+  $match:
+    "true": linux
+  $dynamic: "this.label"

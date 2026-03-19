@@ -1,4 +1,4 @@
-import { generateMatrix } from "./matrix.ts";
+import { generateMatrix, setVerbosity, Verbosity } from "./matrix.ts";
 import YAML from "npm:yaml";
 import process from "node:process";
 import fs from "node:fs";
@@ -53,6 +53,7 @@ function parseArgs(argv: string[]) {
   let config: string | undefined;
   let output: string | undefined;
   let outputFormat: "yaml" | "json" = "yaml";
+  let verbose = false;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--config") {
@@ -65,6 +66,8 @@ function parseArgs(argv: string[]) {
       const fmt = args[++i];
       if (fmt !== "yaml" && fmt !== "json") fail("--output-format must be 'yaml' or 'json'");
       outputFormat = fmt;
+    } else if (args[i] === "--verbose") {
+      verbose = true;
     } else if (args[i].startsWith("-")) {
       fail(`Unknown option: ${args[i]}`);
     } else {
@@ -73,12 +76,16 @@ function parseArgs(argv: string[]) {
     }
   }
 
-  if (!input) fail("Usage: mmm-matrix <input.{yaml,json} | url> [--config <config.{yaml,json} | url>] [--output <output>] [--output-format yaml|json]");
-  return { input, config, output, outputFormat };
+  if (!input) fail("Usage: mmm-matrix <input.{yaml,json} | url> [--config <config.{yaml,json} | url>] [--output <output>] [--output-format yaml|json] [--verbose]");
+  return { input, config, output, outputFormat, verbose };
 }
 
 async function main() {
-  const { input, config, output, outputFormat } = parseArgs(process.argv);
+  const { input, config, output, outputFormat, verbose } = parseArgs(process.argv);
+
+  if (verbose) {
+    setVerbosity(Verbosity.Debugging);
+  }
 
   let inputData;
   try {

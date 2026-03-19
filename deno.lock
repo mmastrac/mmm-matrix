@@ -5,7 +5,8 @@
     "npm:ansi-styles@*": "4.3.0",
     "npm:cli-highlight@*": "2.1.11",
     "npm:esbuild@*": "0.19.9",
-    "npm:mmm-matrix@*": "1.0.6",
+    "npm:mmm-matrix@*": "1.0.9",
+    "npm:mmm-matrix@1.0.9": "1.0.9",
     "npm:print-diff@*": "2.0.0",
     "npm:yaml@*": "2.3.4"
   },
@@ -235,8 +236,8 @@
     "is-fullwidth-code-point@3.0.0": {
       "integrity": "sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg=="
     },
-    "mmm-matrix@1.0.6": {
-      "integrity": "sha512-PipYlOK3rOPTGsHF6teDXo7/H100Lv1cJchDook10T4s8cD1Imy0T6t2Y/I8BRjf61csINZOjAUOJqYxApbi6g==",
+    "mmm-matrix@1.0.9": {
+      "integrity": "sha512-9cYXygSyVcQdqPTeGLxUiXSX8eahkGVUKqMf5wNKRCgTynLlp+Pyn403YX8BANoX2KJVgafZI5okSZvZ3Kwvag==",
       "bin": true
     },
     "mz@2.7.0": {

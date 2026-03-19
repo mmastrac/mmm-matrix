@@ -1,0 +1,6 @@
+os: { "$dynamic": "config.os" }
+job:
+  $match:
+    "config.os == 'linux'": [a, b, c]
+    "config.os == 'mac'": [a]
+    "config.os == 'freebsd'": []

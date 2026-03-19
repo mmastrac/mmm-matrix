@@ -1,0 +1,4 @@
+label:
+  $dynamic: "'x'"
+  $value: linux
+  os: ubuntu

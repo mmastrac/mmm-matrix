@@ -1,0 +1,6 @@
+- os: linux
+  job: a
+- os: linux
+  job: b
+- os: linux
+  job: c

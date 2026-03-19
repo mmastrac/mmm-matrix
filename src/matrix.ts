@@ -1,4 +1,4 @@
-import { isRegularKey } from "./types.ts";
+import { isRegularKey, isSpecialKey } from "./types.ts";
 import { RegularKey } from "./types.ts";
 
 const ifKey = "$if";
@@ -43,8 +43,14 @@ function resolveIncludes(input: any, resolve: ResolveFunction | AsyncResolveFunc
       if (typeof includePath !== "string") {
         throw new Error(`$include value must be a string, got ${friendlyTypeOf(includePath)}`);
       }
+      if (verbosity >= Verbosity.Debugging) {
+        console.debug("$include:", includePath);
+      }
       // deno-lint-ignore no-explicit-any
       return then(resolve(includePath), ({ content, resolve: childResolve }: any) => {
+        if (verbosity >= Verbosity.Debugging) {
+          console.debug("$include resolved:", includePath, "->", content);
+        }
         return then(resolveIncludes(content, childResolve, depth + 1), (resolved: unknown) => {
           const siblings: Record<string, unknown> = {};
           for (const key of Object.keys(input)) {
@@ -122,7 +128,7 @@ type InputObjectValue = InputValue | NestedInputObject | {
 };
 
 // eg: the "mac: ..." in label: mac: os: osx
-type NestedInputObject = { [key: RegularKey]: Input };
+type NestedInputObject = { [key: string]: Input };
 
 function isNestedInputObject(
   input: InputObjectValue,
@@ -160,6 +166,14 @@ function splitValueObject<T>(input: object): SplitValueObject<T> {
     else if (key === valueKey) result.value = val;
     else if (key === ifKey) result.if = val;
     else result.regular[key] = val;
+  }
+  const specials = [
+    result.match !== undefined && matchKey,
+    result.dynamic !== undefined && dynamicKey,
+    result.value !== undefined && valueKey,
+  ].filter(Boolean);
+  if (specials.length > 1) {
+    throw new Error(`${specials.join(", ")} cannot be combined in the same object`);
   }
   return result;
 }
@@ -369,7 +383,7 @@ function flatten(input: Input): OutputRecord[] {
             throw new Error("'undefined' is not a valid value");
           }
           if (typeof nested == "object" && !Array.isArray(nested)) {
-            const { match: matchObj, dynamic, if: ifValue, regular } =
+            const { match: matchObj, dynamic, value, if: ifValue, regular } =
               splitValueObject<InputObjectValue>(nested);
             const ifParts = ifValue !== undefined
               ? [{ [ifSymbol]: ifValue }]
@@ -386,11 +400,24 @@ function flatten(input: Input): OutputRecord[] {
                 );
               }
               nestedOutputs.push(cartesianMerge([{ [ifSymbol]: match.default }], ifParts));
-              outputs.push(nestedOutputs.flat(1));
+              const regularOutputs = Object.keys(regular).map((rKey) =>
+                flattenWithKeyInput(rKey, regular[rKey] as NestedInputValue)
+              );
+              outputs.push(cartesianMerge(nestedOutputs.flat(1), ...regularOutputs));
             } else if (dynamic !== undefined) {
               outputs.push(
                 cartesianMerge([{ [key]: { [dynamicKey]: dynamic } }], ifParts),
               );
+              for (const rKey of Object.keys(regular)) {
+                outputs.push(flattenWithKeyInput(rKey, regular[rKey] as NestedInputValue));
+              }
+            } else if (value !== undefined) {
+              outputs.push(
+                cartesianMerge(flattenWithKeyInput(key, value as NestedInputValue), ifParts),
+              );
+              for (const rKey of Object.keys(regular)) {
+                outputs.push(flattenWithKeyInput(rKey, regular[rKey] as NestedInputValue));
+              }
             } else {
               outputs.push(
                 cartesianMerge(
@@ -428,8 +455,8 @@ function flattenNestedKeyObject(
   }
 
   for (const nestedKey of Object.keys(input)) {
-    if (!isRegularKey(nestedKey)) {
-      throw new Error(`Illegal key: ${key}`);
+    if (isSpecialKey(nestedKey)) {
+      throw new Error(`Illegal key: ${nestedKey}`);
     }
     const value = input[nestedKey];
     if (value === null) {
@@ -623,10 +650,6 @@ function itemShouldMaskPrevious(
     }
   }
   return keys1.length == keys2.length ? "equal" : "superset";
-}
-
-function defaultResolve(): never {
-  throw new Error("$include cannot be used in this context");
 }
 
 // deno-lint-ignore no-explicit-any
