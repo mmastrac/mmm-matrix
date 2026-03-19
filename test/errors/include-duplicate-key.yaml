@@ -1,2 +1,2 @@
-$include: "./fragments/include-nested-fragment.yaml"
+$include: "../fragments/include-nested-fragment.yaml"
 os: overridden

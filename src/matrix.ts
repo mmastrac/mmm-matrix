@@ -12,48 +12,74 @@ const includeKey = "$include";
 const maxIncludeDepth = 10;
 
 // deno-lint-ignore no-explicit-any
-type ResolveFunction = (path: string) => any;
-
+type ResolveResult = { content: any; resolve: ResolveFunction };
 // deno-lint-ignore no-explicit-any
-function resolveIncludes(input: any, resolve: ResolveFunction, depth: number): any {
+type AsyncResolveResult = { content: any; resolve: AsyncResolveFunction };
+
+export type ResolveFunction = (path: string) => ResolveResult;
+export type AsyncResolveFunction = (path: string) => AsyncResolveResult | Promise<AsyncResolveResult>;
+
+// Helper to chain sync-or-async values without forcing everything async
+function then<T, U>(value: T | Promise<T>, fn: (v: T) => U | Promise<U>): U | Promise<U> {
+  if (value instanceof Promise) {
+    return value.then(fn);
+  }
+  return fn(value);
+}
+
+// "Colorless" resolveIncludes: returns sync if resolve is sync, Promise if resolve is async
+// deno-lint-ignore no-explicit-any
+function resolveIncludes(input: any, resolve: ResolveFunction | AsyncResolveFunction, depth: number): any {
   if (depth > maxIncludeDepth) {
     throw new Error(`$include depth exceeded ${maxIncludeDepth} levels`);
   }
   if (Array.isArray(input)) {
-    return input.map((item) => resolveIncludes(item, resolve, depth));
+    const results = input.map((item: unknown) => resolveIncludes(item, resolve, depth));
+    return results.some((r: unknown) => r instanceof Promise) ? Promise.all(results) : results;
   }
   if (typeof input === "object" && input !== null) {
     if (includeKey in input) {
-      const path = input[includeKey];
-      if (typeof path !== "string") {
-        throw new Error(`$include value must be a string, got ${friendlyTypeOf(path)}`);
+      const includePath = input[includeKey];
+      if (typeof includePath !== "string") {
+        throw new Error(`$include value must be a string, got ${friendlyTypeOf(includePath)}`);
       }
-      const resolved = resolveIncludes(resolve(path), resolve, depth + 1);
-      const siblings: Record<string, unknown> = {};
-      for (const key of Object.keys(input)) {
-        if (key !== includeKey) {
-          siblings[key] = input[key];
-        }
-      }
-      const hasSiblings = Object.keys(siblings).length > 0;
-      if (hasSiblings) {
-        if (typeof resolved !== "object" || resolved === null || Array.isArray(resolved)) {
-          throw new Error(`$include resolved to ${friendlyTypeOf(resolved)} but has sibling keys`);
-        }
-        for (const key of Object.keys(siblings)) {
-          if (key in resolved) {
-            throw new Error(`$include resolved object has duplicate key '${key}'`);
+      // deno-lint-ignore no-explicit-any
+      return then(resolve(includePath), ({ content, resolve: childResolve }: any) => {
+        return then(resolveIncludes(content, childResolve, depth + 1), (resolved: unknown) => {
+          const siblings: Record<string, unknown> = {};
+          for (const key of Object.keys(input)) {
+            if (key !== includeKey) {
+              siblings[key] = input[key];
+            }
           }
-        }
-        const merged = { ...resolved, ...siblings };
-        return resolveIncludes(merged, resolve, depth);
-      }
-      return resolved;
+          const hasSiblings = Object.keys(siblings).length > 0;
+          if (hasSiblings) {
+            if (typeof resolved !== "object" || resolved === null || Array.isArray(resolved)) {
+              throw new Error(`$include resolved to ${friendlyTypeOf(resolved)} but has sibling keys`);
+            }
+            for (const key of Object.keys(siblings)) {
+              if (key in (resolved as Record<string, unknown>)) {
+                throw new Error(`$include resolved object has duplicate key '${key}'`);
+              }
+            }
+            const merged = { ...resolved as Record<string, unknown>, ...siblings };
+            return resolveIncludes(merged, childResolve, depth);
+          }
+          return resolved;
+        });
+      });
+    }
+    const entries = Object.entries(input);
+    const values = entries.map(([, value]) => resolveIncludes(value, resolve, depth));
+    if (values.some((r: unknown) => r instanceof Promise)) {
+      return Promise.all(values).then((resolvedValues: unknown[]) => {
+        const result: Record<string, unknown> = {};
+        entries.forEach(([key], i) => { result[key] = resolvedValues[i]; });
+        return result;
+      });
     }
     const result: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(input)) {
-      result[key] = resolveIncludes(value, resolve, depth);
-    }
+    entries.forEach(([key], i) => { result[key] = values[i]; });
     return result;
   }
   return input;
@@ -604,8 +630,7 @@ function defaultResolve(): never {
 }
 
 // deno-lint-ignore no-explicit-any
-export function generateMatrix(input: Input, config: any, resolve: ResolveFunction = defaultResolve): OutputRecord[] {
-  input = resolveIncludes(input, resolve, 0);
+function generateMatrixSync(input: Input, config: any): OutputRecord[] {
   if (!isObject(input) && !isArray(input)) {
     throw new Error("Top-level input must be an array or object");
   }
@@ -637,6 +662,24 @@ export function generateMatrix(input: Input, config: any, resolve: ResolveFuncti
   }
 
   return merged;
+}
+
+// deno-lint-ignore no-explicit-any
+export function generateMatrix(input: Input, config: any): OutputRecord[];
+// deno-lint-ignore no-explicit-any
+export function generateMatrix(input: Input, config: any, resolve: ResolveFunction): OutputRecord[];
+// deno-lint-ignore no-explicit-any
+export function generateMatrix(input: Input, config: any, resolve: AsyncResolveFunction): Promise<OutputRecord[]>;
+// deno-lint-ignore no-explicit-any
+export function generateMatrix(input: Input, config: any, resolve?: ResolveFunction | AsyncResolveFunction): OutputRecord[] | Promise<OutputRecord[]> {
+  if (!resolve) {
+    return generateMatrixSync(input, config);
+  }
+  const resolved = resolveIncludes(input, resolve, 0);
+  if (resolved instanceof Promise) {
+    return resolved.then((r: Input) => generateMatrixSync(r, config));
+  }
+  return generateMatrixSync(resolved, config);
 }
 
 export function setVerbosity(verbosity_: Verbosity) {

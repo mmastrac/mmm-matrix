@@ -1,2 +1,2 @@
-$include: "./fragments/include-array-fragment.yaml"
+$include: "../fragments/include-array-fragment.yaml"
 extra: true

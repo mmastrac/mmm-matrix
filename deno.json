@@ -13,6 +13,7 @@
     "bundle": "deno run -A tools/bundle.ts && tools/test-dist.sh",
     "test": "deno test -P",
     "release": "deno run -A tools/bundle.ts && tools/release.sh",
+    "clean": "rm -rf dist/",
     "test-action": "act -j dist",
     "test-example": "act pull_request -e examples/multi-step-pr.json -W examples/ -C ."
   }

@@ -19,6 +19,14 @@ function parseArg(name: string) {
   }
 }
 
+// For JavaScript actions, process.cwd() is always GITHUB_WORKSPACE (the repo root)
+function makeResolve(dir: string) {
+  return (file: string) => {
+    const resolved = path.resolve(dir, file);
+    return { content: YAML.parse(fs.readFileSync(resolved, "utf-8")), resolve: makeResolve(path.dirname(resolved)) };
+  };
+}
+
 const input = parseArg("input");
 
 core.startGroup("Input matrix");
@@ -43,11 +51,7 @@ core.startGroup("Config object");
 core.info(highlight(YAML.stringify(config), { language: "yaml" }));
 core.endGroup();
 
-// For JavaScript actions, process.cwd() is always GITHUB_WORKSPACE (the repo root)
-const resolve = (file: string) => {
-  const resolved = path.resolve(process.cwd(), file);
-  return YAML.parse(fs.readFileSync(resolved, "utf-8"));
-};
+const resolve = makeResolve(process.cwd());
 
 let output;
 try {
