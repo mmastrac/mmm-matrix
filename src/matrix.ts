@@ -7,6 +7,57 @@ const valueKey = "$value";
 const dynamicKey = "$dynamic";
 const arrayKey = "$array";
 const arraysKey = "$arrays";
+const includeKey = "$include";
+
+const maxIncludeDepth = 10;
+
+// deno-lint-ignore no-explicit-any
+type ResolveFunction = (path: string) => any;
+
+// deno-lint-ignore no-explicit-any
+function resolveIncludes(input: any, resolve: ResolveFunction, depth: number): any {
+  if (depth > maxIncludeDepth) {
+    throw new Error(`$include depth exceeded ${maxIncludeDepth} levels`);
+  }
+  if (Array.isArray(input)) {
+    return input.map((item) => resolveIncludes(item, resolve, depth));
+  }
+  if (typeof input === "object" && input !== null) {
+    if (includeKey in input) {
+      const path = input[includeKey];
+      if (typeof path !== "string") {
+        throw new Error(`$include value must be a string, got ${friendlyTypeOf(path)}`);
+      }
+      const resolved = resolveIncludes(resolve(path), resolve, depth + 1);
+      const siblings: Record<string, unknown> = {};
+      for (const key of Object.keys(input)) {
+        if (key !== includeKey) {
+          siblings[key] = input[key];
+        }
+      }
+      const hasSiblings = Object.keys(siblings).length > 0;
+      if (hasSiblings) {
+        if (typeof resolved !== "object" || resolved === null || Array.isArray(resolved)) {
+          throw new Error(`$include resolved to ${friendlyTypeOf(resolved)} but has sibling keys`);
+        }
+        for (const key of Object.keys(siblings)) {
+          if (key in resolved) {
+            throw new Error(`$include resolved object has duplicate key '${key}'`);
+          }
+        }
+        const merged = { ...resolved, ...siblings };
+        return resolveIncludes(merged, resolve, depth);
+      }
+      return resolved;
+    }
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(input)) {
+      result[key] = resolveIncludes(value, resolve, depth);
+    }
+    return result;
+  }
+  return input;
+}
 
 // Workaround for https://github.com/microsoft/TypeScript/issues/17867
 // OutputRecord needs [key: string] + a differently-typed $if property,
@@ -113,6 +164,7 @@ function isObject(input: unknown): input is object {
 function friendlyTypeOf(input: unknown): string {
   if (input === null) return "null";
   if (input === undefined) return "undefined";
+  if (Array.isArray(input)) return "array";
   return typeof input;
 }
 
@@ -547,8 +599,13 @@ function itemShouldMaskPrevious(
   return keys1.length == keys2.length ? "equal" : "superset";
 }
 
+function defaultResolve(): never {
+  throw new Error("$include cannot be used in this context");
+}
+
 // deno-lint-ignore no-explicit-any
-export function generateMatrix(input: Input, config: any): OutputRecord[] {
+export function generateMatrix(input: Input, config: any, resolve: ResolveFunction = defaultResolve): OutputRecord[] {
+  input = resolveIncludes(input, resolve, 0);
   if (!isObject(input) && !isArray(input)) {
     throw new Error("Top-level input must be an array or object");
   }

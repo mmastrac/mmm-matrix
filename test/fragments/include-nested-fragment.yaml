@@ -1,0 +1,2 @@
+os: ubuntu-latest
+job: [build, test]

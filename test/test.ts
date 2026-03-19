@@ -20,6 +20,10 @@ try {
 
 Deno.chdir(new URL("./", import.meta.url));
 
+function resolve(file: string): unknown {
+  return YAML.parse(Deno.readTextFileSync(file));
+}
+
 const files = new Set(
   Array.from(Deno.readDirSync("."))
     .filter((f) => f.isFile)
@@ -152,7 +156,7 @@ function generateTestFunction(
 
 // deno-lint-ignore no-explicit-any
 function testGenerate(input: any, config: any, output: any) {
-  const generated = generateMatrix(input, config);
+  const generated = generateMatrix(input, config, resolve);
   const testOutput = YAML.stringify(generated, {
     aliasDuplicateObjects: false,
   });
@@ -167,7 +171,7 @@ function testGenerate(input: any, config: any, output: any) {
 // deno-lint-ignore no-explicit-any
 function testGenerateError(input: any, config: any, output: any) {
   try {
-    const output = generateMatrix(input, config);
+    const output = generateMatrix(input, config, resolve);
     fail(
       "Test should not have succeeded, but it produced:" +
         YAML.stringify(output, { aliasDuplicateObjects: false }),

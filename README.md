@@ -91,14 +91,16 @@ defaults to stdout. Use `--output-format json` for JSON output instead of YAML.
 
 `mmm-matrix` builds a matrix by "adding" and "multiplying" configurations.
 
-The matrix is built in three phases:
+The matrix is built in four phases:
 
-1. Addition and multiplication: the nested objects, arrays and values are
+1. Include resolution: any `$include` directives are resolved, loading external
+   files and merging their contents into the input tree.
+2. Addition and multiplication: the nested objects, arrays and values are
    combined to produce the candidate list of matrix items. The candidate list
    may contain `$if` or `$dynamic` items that require further evaluation.
-2. Evaluation: `$if` or `$dynamic` items are evaluated and the computed item
+3. Evaluation: `$if` or `$dynamic` items are evaluated and the computed item
    list is generated.
-3. Merging: any items that are equivalent to a previous item are skipped, while
+4. Merging: any items that are equivalent to a previous item are skipped, while
    any item that is a strict superset of a previous item replaces that previous
    item.
 
@@ -235,6 +237,36 @@ label:
 ```
 
 ## Special object keys
+
+### `$include`
+
+The `$include` key loads an external YAML or JSON file and inlines its contents. Paths
+are resolved relative to the input file (CLI) or `$GITHUB_WORKSPACE` (action).
+Includes are processed recursively.
+
+An `$include` can appear anywhere in the tree: at the top level, in an object
+context, or in a value context.
+
+When `$include` resolves to an object and has sibling keys, the included keys
+are merged with the siblings and duplicate keys are an error. When it resolves to a
+non-object (array, scalar), it must be the sole key in its object.
+
+```yaml
+# Top-level: replace the entire input with an external file
+$include: "./matrix.yaml"
+
+# Object context: merge included keys with siblings
+label:
+  linux:
+    $include: "./linux-defaults.yaml"
+    arch: [x86_64, aarch64]
+
+# Value context: include a scalar or array as a value
+os:
+  $include: "./os.yaml"        # os.yaml contains: linux, equivalent to { "os": "linux" }
+job:
+  $include: "./jobs.yaml"      # jobs.yaml contains: [build, test], equivalent to { "job": ["build", "test"] }
+```
 
 ### `$if`
 
