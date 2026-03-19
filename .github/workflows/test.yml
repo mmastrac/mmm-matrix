@@ -22,6 +22,7 @@ jobs:
                 os: ubuntu-latest
                 job: [job-a, job-b, { "$value": "job-c", "$if": "config.github.actor != 'mmastrac'" }]
                 user: { "$dynamic": "config.github.actor" }
+                $include: "./dynamic.yml"
               macos:
                 os: macOS-latest
                 job: [job-c]
@@ -30,7 +31,6 @@ jobs:
                 job: [job-a]
           config: |
             github: ${{ toJSON(github) }}
-
   matrix:
     name: ${{ matrix.label }} / ${{ matrix.job }}
     needs: dist
