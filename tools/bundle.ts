@@ -11,8 +11,10 @@ const nodePlugin = {
   },
 };
 
-const result = await esbuild.build({
-  plugins: [nodePlugin, ...denoPlugins()],
+const plugins = [nodePlugin, ...denoPlugins()];
+
+const actionResult = await esbuild.build({
+  plugins,
   entryPoints: ["src/main.ts"],
   outfile: "dist/action.js",
   platform: "node",
@@ -20,8 +22,23 @@ const result = await esbuild.build({
   format: "cjs",
 });
 
-if (result.errors.length || result.warnings.length) {
-  console.error(result);
+if (actionResult.errors.length || actionResult.warnings.length) {
+  console.error(actionResult);
+  Deno.exit(1);
+}
+
+const cliResult = await esbuild.build({
+  plugins,
+  entryPoints: ["src/cli.ts"],
+  outfile: "dist/cli.js",
+  platform: "node",
+  bundle: true,
+  format: "cjs",
+  banner: { js: "#!/usr/bin/env node" },
+});
+
+if (cliResult.errors.length || cliResult.warnings.length) {
+  console.error(cliResult);
   Deno.exit(1);
 }
 
