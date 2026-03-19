@@ -22,25 +22,26 @@ function isFilePath(source: string): boolean {
   return true;
 }
 
+function tryParseUrl(source: string): URL | null {
+  try {
+    const url = new URL(source);
+    return fetchSchemes.has(url.protocol) ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 async function loadInput(source: string): Promise<string> {
   // Inline JSON/YAML
   if (source.startsWith("{") || source.startsWith("[")) {
     return source;
   }
   // URL with a supported scheme
-  try {
-    const url = new URL(source);
-    if (fetchSchemes.has(url.protocol)) {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      return await res.text();
-    }
-  } catch (e) {
-    if (e instanceof TypeError) {
-      // Not a valid URL — fall through to file read
-    } else {
-      throw e;
-    }
+  const url = tryParseUrl(source);
+  if (url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    return await res.text();
   }
   // File path
   return fs.readFileSync(source, "utf-8");
