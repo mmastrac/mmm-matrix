@@ -10,8 +10,12 @@ import {
 type Format = "JSON" | "JSONC" | "YAML";
 
 let verbosity = Verbosity.Normal;
-if (Deno.env.get("VERBOSE") == "debug") {
-  setVerbosity(verbosity = Verbosity.Debugging);
+try {
+  if (Deno.env.get("VERBOSE") == "debug") {
+    setVerbosity(verbosity = Verbosity.Debugging);
+  }
+} catch {
+  // No env permission — skip verbose check
 }
 
 Deno.chdir(new URL("./", import.meta.url));
