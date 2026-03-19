@@ -20,10 +20,18 @@ try {
 
 Deno.chdir(new URL("./", import.meta.url));
 
-function resolve(file: string): unknown {
-  return YAML.parse(Deno.readTextFileSync(file));
+function dirName(p: string): string {
+  const lastSlash = p.lastIndexOf("/");
+  return lastSlash >= 0 ? p.slice(0, lastSlash) : ".";
 }
 
+function makeResolve(dir: string) {
+  return (file: string) => {
+    const resolved = `${dir}/${file}`;
+    const content = YAML.parse(Deno.readTextFileSync(resolved));
+    return { content, resolve: makeResolve(dirName(resolved)) };
+  };
+}
 const files = new Set(
   Array.from(Deno.readDirSync("."))
     .filter((f) => f.isFile)
@@ -148,15 +156,17 @@ function generateTestFunction(
 
   const input = loadTest(inputFile, format);
 
+  const testResolve = makeResolve(dirName(inputFile) || ".");
+
   Deno.test(
     { name: `${success ? "" : "error "}${base} (${format})` },
-    () => (success ? testGenerate : testGenerateError)(input, config, output),
+    () => (success ? testGenerate : testGenerateError)(input, config, output, testResolve),
   );
 }
 
 // deno-lint-ignore no-explicit-any
-function testGenerate(input: any, config: any, output: any) {
-  const generated = generateMatrix(input, config, resolve);
+function testGenerate(input: any, config: any, output: any, testResolve: ReturnType<typeof makeResolve>) {
+  const generated = generateMatrix(input, config, testResolve);
   const testOutput = YAML.stringify(generated, {
     aliasDuplicateObjects: false,
   });
@@ -169,9 +179,9 @@ function testGenerate(input: any, config: any, output: any) {
 }
 
 // deno-lint-ignore no-explicit-any
-function testGenerateError(input: any, config: any, output: any) {
+function testGenerateError(input: any, config: any, output: any, testResolve: ReturnType<typeof makeResolve>) {
   try {
-    const output = generateMatrix(input, config, resolve);
+    const output = generateMatrix(input, config, testResolve);
     fail(
       "Test should not have succeeded, but it produced:" +
         YAML.stringify(output, { aliasDuplicateObjects: false }),

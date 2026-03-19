@@ -22,7 +22,7 @@ jobs:
                 os: ubuntu-latest
                 job: [job-a, job-b, { "$value": "job-c", "$if": "config.github.actor != 'mmastrac'" }]
                 user: { "$dynamic": "config.github.actor" }
-                $include: ".github/workflows/dynamic.yml"
+                $include: ".github/data/dynamic.yml"
               macos:
                 os: macOS-latest
                 job: [job-c]

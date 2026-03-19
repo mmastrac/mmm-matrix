@@ -95,15 +95,35 @@ async function main() {
     }
   }
 
-  const baseDir = isFilePath(input) ? path.dirname(path.resolve(input)) : process.cwd();
-  const resolve = (file: string) => {
-    const resolved = path.resolve(baseDir, file);
-    return YAML.parse(fs.readFileSync(resolved, "utf-8"));
-  };
+  function makeFileResolve(dir: string) {
+    return (file: string) => {
+      const resolved = path.resolve(dir, file);
+      return { content: YAML.parse(fs.readFileSync(resolved, "utf-8")), resolve: makeFileResolve(path.dirname(resolved)) };
+    };
+  }
+
+  function makeUrlResolve(base: string) {
+    return async (file: string) => {
+      const resolved = new URL(file, base).href;
+      const res = await fetch(resolved);
+      if (!res.ok) throw new Error(`$include fetch failed: ${res.status} ${res.statusText}`);
+      const text = await res.text();
+      const parent = resolved.replace(/\/[^/]*$/, "/");
+      return { content: YAML.parse(text), resolve: makeUrlResolve(parent) };
+    };
+  }
 
   let result;
   try {
-    result = generateMatrix(inputData, configData, resolve);
+    if (isFilePath(input)) {
+      const baseDir = path.dirname(path.resolve(input));
+      result = generateMatrix(inputData, configData, makeFileResolve(baseDir));
+    } else if (input.startsWith("{") || input.startsWith("[")) {
+      result = generateMatrix(inputData, configData, makeFileResolve(process.cwd()));
+    } else {
+      const parent = input.replace(/\/[^/]*$/, "/");
+      result = await generateMatrix(inputData, configData, makeUrlResolve(parent));
+    }
   } catch (e) {
     fail(`Failed to generate matrix: ${e}`);
   }
