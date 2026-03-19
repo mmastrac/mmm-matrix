@@ -3,10 +3,10 @@
   "version": "1.0.6",
   "description": "Matrix Maker: generate CI matrix combinations from a compact YAML input",
   "bin": {
-    "mmm-matrix": "dist/cli.js"
+    "mmm-matrix": "dist/cli.cjs"
   },
   "files": [
-    "dist/cli.js",
+    "dist/cli.cjs",
     "README.md"
   ]
 }

@@ -30,7 +30,7 @@ if (actionResult.errors.length || actionResult.warnings.length) {
 const cliResult = await esbuild.build({
   plugins,
   entryPoints: ["src/cli.ts"],
-  outfile: "dist/cli.js",
+  outfile: "dist/cli.cjs",
   platform: "node",
   bundle: true,
   format: "cjs",
