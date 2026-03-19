@@ -1,4 +1,5 @@
 {
+  "nodeModulesDir": "auto",
   "tasks": {
     "bundle": "deno run -A tools/bundle.ts && tools/test-dist.sh",
     "test": "deno test -A test/test.ts",

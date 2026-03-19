@@ -11,4 +11,6 @@ export GITHUB_OUTPUT=
 diff -u test/dist/dist-test.out <(. test/dist/dist-test.in && node dist/action.js)
 diff -u test/dist/dist-config.out <(. test/dist/dist-config.in && node dist/action.js)
 diff -u test/dist/dist-default.out <(. test/dist/dist-default.in && node dist/action.js)
+diff -u test/nested-null.out.yaml <(node dist/cli.cjs test/nested-null.yaml)
+diff -u test/nested-null.out.yaml <(deno run -A dist/cli.cjs test/nested-null.yaml)
 echo Tests passed.

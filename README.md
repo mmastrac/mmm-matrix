@@ -1,4 +1,4 @@
-# mmmm: Matrix Maker for GitHub Actions
+# mmm-matrix: Matrix Maker for GitHub Actions (and CLI)
 
 `mmm-matrix` is a concise way to build dynamic GitHub Actions
 [matrix strategies](https://docs.github.com/en/actions/using-jobs/using-a-matrix-for-your-jobs)
