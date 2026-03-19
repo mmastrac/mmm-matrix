@@ -68,6 +68,25 @@ jobs:
         run: "echo '${{ toJSON(matrix) }}'"
 ```
 
+## CLI Usage
+
+`mmm-matrix` is also available as a standalone CLI tool. You can run it with any
+JavaScript runtime:
+
+```bash
+# npx
+npx mmm-matrix '{"os": ["linux", "mac"], "job": ["build", "test"]}' --output-format json
+
+# deno
+deno run -A npm:mmm-matrix '{"os": ["linux", "mac"], "job": ["build", "test"]}' --output-format json
+
+# bun
+bunx mmm-matrix '{"os": ["linux", "mac"], "job": ["build", "test"]}' --output-format json
+```
+
+Input and config arguments accept inline JSON/YAML, file paths, or URLs. Output
+defaults to stdout. Use `--output-format json` for JSON output instead of YAML.
+
 ## Building matrices
 
 `mmm-matrix` builds a matrix by "adding" and "multiplying" configurations.

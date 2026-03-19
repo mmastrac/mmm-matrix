@@ -1,6 +1,6 @@
 {
   "name": "mmm-matrix",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Matrix Maker: generate CI matrix combinations from a compact YAML input",
   "bin": {
     "mmm-matrix": "dist/cli.cjs"

@@ -1,6 +1,7 @@
 {
   "nodeModulesDir": "auto",
   "tasks": {
+    "cli": "deno run -A tools/bundle.ts && deno run -A dist/cli.cjs",
     "bundle": "deno run -A tools/bundle.ts && tools/test-dist.sh",
     "test": "deno test -A test/test.ts",
     "release": "deno run -A tools/bundle.ts && tools/release.sh",
