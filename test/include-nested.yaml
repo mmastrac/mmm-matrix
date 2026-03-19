@@ -1,0 +1,6 @@
+label:
+  linux:
+    $include: "./fragments/include-nested-fragment.yaml"
+    arch: [x86_64, aarch64]
+  mac:
+    os: macos-latest

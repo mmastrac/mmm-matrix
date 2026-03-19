@@ -1,0 +1,4 @@
+os:
+  $include: "./fragments/include-os-fragment.yaml"
+job:
+  $include: "./fragments/include-jobs-fragment.yaml"

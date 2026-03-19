@@ -2,6 +2,7 @@ import { generateMatrix } from "./matrix.ts";
 import YAML from "npm:yaml";
 import process from "node:process";
 import fs from "node:fs";
+import path from "node:path";
 
 function fail(message: string): never {
   console.error(message);
@@ -9,6 +10,17 @@ function fail(message: string): never {
 }
 
 const fetchSchemes = new Set(["http:", "https:", "file:", "data:"]);
+
+function isFilePath(source: string): boolean {
+  if (source.startsWith("{") || source.startsWith("[")) return false;
+  try {
+    const url = new URL(source);
+    if (fetchSchemes.has(url.protocol)) return false;
+  } catch {
+    // Not a valid URL — it's a file path
+  }
+  return true;
+}
 
 async function loadInput(source: string): Promise<string> {
   // Inline JSON/YAML
@@ -83,9 +95,15 @@ async function main() {
     }
   }
 
+  const baseDir = isFilePath(input) ? path.dirname(path.resolve(input)) : process.cwd();
+  const resolve = (file: string) => {
+    const resolved = path.resolve(baseDir, file);
+    return YAML.parse(fs.readFileSync(resolved, "utf-8"));
+  };
+
   let result;
   try {
-    result = generateMatrix(inputData, configData);
+    result = generateMatrix(inputData, configData, resolve);
   } catch (e) {
     fail(`Failed to generate matrix: ${e}`);
   }

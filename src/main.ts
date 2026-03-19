@@ -3,6 +3,8 @@ import * as core from "npm:@actions/core";
 import YAML from "npm:yaml";
 import { highlight } from "npm:cli-highlight";
 import process from "node:process";
+import path from "node:path";
+import fs from "node:fs";
 
 function parseArg(name: string) {
   try {
@@ -41,9 +43,15 @@ core.startGroup("Config object");
 core.info(highlight(YAML.stringify(config), { language: "yaml" }));
 core.endGroup();
 
+const workspace = process.env.GITHUB_WORKSPACE ?? process.cwd();
+const resolve = (file: string) => {
+  const resolved = path.resolve(workspace, file);
+  return YAML.parse(fs.readFileSync(resolved, "utf-8"));
+};
+
 let output;
 try {
-  output = generateMatrix(input, config);
+  output = generateMatrix(input, config, resolve);
 } catch (e) {
   core.setFailed(e);
   process.exit(1);

@@ -1,0 +1,4 @@
+- os: linux
+  job: build
+- os: linux
+  job: test
