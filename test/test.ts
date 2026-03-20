@@ -1,6 +1,8 @@
+/// <reference lib="deno.ns" />
 import YAML from "npm:yaml";
 import { printUnifiedDiff } from "npm:print-diff";
-import { generateMatrix, setVerbosity, Verbosity } from "../src/matrix.ts";
+import { generateMatrix } from "../src/matrix.ts";
+import { logDebug, logError, setVerbosity, Verbosity } from "../src/log.ts";
 
 import {
   assertEquals,
@@ -8,11 +10,9 @@ import {
 } from "https://deno.land/std@0.214.0/assert/mod.ts";
 
 type Format = "JSON" | "JSONC" | "YAML";
-
-let verbosity = Verbosity.Normal;
 try {
   if (Deno.env.get("VERBOSE") == "debug") {
-    setVerbosity(verbosity = Verbosity.Debugging);
+    setVerbosity(Verbosity.Debugging);
   }
 } catch {
   // No env permission — skip verbose check
@@ -143,9 +143,7 @@ function generateTestFunction(
   let config = {};
   if (configFile !== undefined) {
     config = loadTest(configFile.test, configFile.format);
-    if (verbosity >= Verbosity.Debugging) {
-      console.log("Config:", config);
-    }
+    logDebug("Config:", config);
   }
 
   const outputFile = findTest(files, `${base}.out`);
@@ -190,7 +188,7 @@ function testGenerateError(input: any, config: any, output: any, testResolve: Re
     const expected = YAML.stringify(output, { aliasDuplicateObjects: false });
     const actual = YAML.stringify((e as Error).message);
     if (actual != expected) {
-      console.error(e);
+      logError(e);
     }
     assertEquals(actual, expected);
   }

@@ -1,11 +1,13 @@
-import { generateMatrix, setVerbosity, Verbosity } from "./matrix.ts";
+/// Entrypoint for the CLI (npx mmm-matrix ...).
+import { generateMatrix } from "./matrix.ts";
 import YAML from "npm:yaml";
 import process from "node:process";
 import fs from "node:fs";
 import path from "node:path";
+import { logError, setVerbosity, Verbosity } from "./log.ts";
 
 function fail(message: string): never {
-  console.error(message);
+  logError(message);
   process.exit(1);
 }
 

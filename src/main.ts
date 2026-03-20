@@ -1,3 +1,4 @@
+/// Entrypoint for the GitHub Action.
 import { generateMatrix } from "./matrix.ts";
 import * as core from "npm:@actions/core";
 import YAML from "npm:yaml";
@@ -14,7 +15,7 @@ function parseArg(name: string) {
     }
     return output;
   } catch (e) {
-    core.setFailed(e);
+    core.setFailed(e as string);
     process.exit(1);
   }
 }
@@ -57,7 +58,7 @@ let output;
 try {
   output = generateMatrix(input, config, resolve);
 } catch (e) {
-  core.setFailed(e);
+  core.setFailed(e as string);
   process.exit(1);
 }
 

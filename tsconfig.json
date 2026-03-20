@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "lib": ["es2023"]
+    "lib": ["es2023", "dom"]
   },
-  "files": []
+  "include": ["src/**/*.ts"]
 }

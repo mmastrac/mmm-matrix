@@ -1,5 +1,6 @@
 import * as esbuild from "https://deno.land/x/esbuild@v0.19.11/mod.js";
 import { denoPlugins } from "https://deno.land/x/esbuild_deno_loader@0.9.0/mod.ts";
+import { logError, logInfo } from "../src/log.ts";
 
 const nodePlugin = {
   name: "node",
@@ -23,7 +24,7 @@ const actionResult = await esbuild.build({
 });
 
 if (actionResult.errors.length || actionResult.warnings.length) {
-  console.error(actionResult);
+  logError(actionResult);
   Deno.exit(1);
 }
 
@@ -38,9 +39,9 @@ const cliResult = await esbuild.build({
 });
 
 if (cliResult.errors.length || cliResult.warnings.length) {
-  console.error(cliResult);
+  logError(cliResult);
   Deno.exit(1);
 }
 
 esbuild.stop();
-console.log("Success.");
+logInfo("Success.");

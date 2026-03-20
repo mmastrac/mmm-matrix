@@ -1,5 +1,6 @@
 import { isRegularKey, isSpecialKey } from "./types.ts";
 import { RegularKey } from "./types.ts";
+import { isDebugging, logDebug, logDetailed } from "./log.ts";
 
 const ifKey = "$if";
 const matchKey = "$match";
@@ -43,14 +44,10 @@ function resolveIncludes(input: any, resolve: ResolveFunction | AsyncResolveFunc
       if (typeof includePath !== "string") {
         throw new Error(`$include value must be a string, got ${friendlyTypeOf(includePath)}`);
       }
-      if (verbosity >= Verbosity.Debugging) {
-        console.debug("$include:", includePath);
-      }
+      logDebug("$include:", includePath);
       // deno-lint-ignore no-explicit-any
       return then(resolve(includePath), ({ content, resolve: childResolve }: any) => {
-        if (verbosity >= Verbosity.Debugging) {
-          console.debug("$include resolved:", includePath, "->", content);
-        }
+        logDebug("$include resolved:", includePath, "->", content);
         return then(resolveIncludes(content, childResolve, depth + 1), (resolved: unknown) => {
           const siblings: Record<string, unknown> = {};
           for (const key of Object.keys(input)) {
@@ -97,13 +94,7 @@ function resolveIncludes(input: any, resolve: ResolveFunction | AsyncResolveFunc
 // deno-lint-ignore no-explicit-any
 const ifSymbol: unique symbol = ifKey as any;
 
-export enum Verbosity {
-  Normal,
-  Detailed,
-  Debugging,
-}
-
-let verbosity = Verbosity.Normal;
+// NOTE: Verbosity + logging are centralized in `log.ts`.
 
 type OutputValue = string | boolean | { [dynamicKey]: string };
 type IfValue = string | string[];
@@ -250,15 +241,13 @@ function merge(partials: OutputRecord[]): OutputRecord {
 
 function cartesianMerge(...partials: OutputRecord[][]): OutputRecord[] {
   let input;
-  if (verbosity == Verbosity.Debugging) {
+  if (isDebugging()) {
     input = structuredClone(partials);
   }
 
   const nonEmptyPartials = partials.filter((partial) => partial.length > 0);
   const output = cartesian(...nonEmptyPartials).map(merge);
-  if (verbosity == Verbosity.Debugging) {
-    console.debug("Merge:", input, "->", output);
-  }
+  logDebug("Merge:", input, "->", output);
 
   return output;
 }
@@ -269,21 +258,15 @@ function cartesianMerge(...partials: OutputRecord[][]): OutputRecord[] {
  */
 function flattenArray(input: Input[]): OutputRecord[] {
   const flattened = input.flatMap(flatten);
-  if (verbosity == Verbosity.Debugging) {
-    console.debug("Flatten array:", input, "->", flattened);
-  }
+  logDebug("Flatten array:", input, "->", flattened);
   return flattened.filter((item) => {
     const keys = Object.keys(item);
     if (keys.length == 0) {
-      if (verbosity == Verbosity.Debugging) {
-        console.debug("Removing item with no content", item);
-      }
+      logDebug("Removing item with no content", item);
       return false;
     }
     if (keys.length == 1 && keys[0] == ifKey) {
-      if (verbosity == Verbosity.Debugging) {
-        console.debug("Removing item with no content", item);
-      }
+      logDebug("Removing item with no content", item);
       return false;
     }
     return true;
@@ -342,9 +325,7 @@ function flatten(input: Input): OutputRecord[] {
             }
             // Finally, push an empty set if all items failed
             nestedOutputs.push([{ [ifSymbol]: match.default }]);
-            if (verbosity == Verbosity.Debugging) {
-              console.debug("Flattened $match:", input, "->", nestedOutputs);
-            }
+            logDebug("Flattened $match:", input, "->", nestedOutputs);
             outputs.push(nestedOutputs.flat(1));
           } else {
             throw new Error(
@@ -470,16 +451,14 @@ function flattenNestedKeyObject(
     }
 
     const flattened = flatten(value);
-    if (verbosity == Verbosity.Debugging) {
-      console.debug(
-        "Flatten with key:",
-        key,
-        "=",
-        value,
-        "->",
-        flattened,
-      );
-    }
+    logDebug(
+      "Flatten with key:",
+      key,
+      "=",
+      value,
+      "->",
+      flattened,
+    );
 
     outputs.push(cartesianMerge([{ [key]: nestedKey }], flattened));
   }
@@ -528,9 +507,7 @@ function flattenWithKeyInput(
         );
       }
       outputs.push([{ [ifSymbol]: ifAccum }]);
-      if (verbosity == Verbosity.Debugging) {
-        console.debug("Flattened $match:", input, "->", outputs);
-      }
+      logDebug("Flattened $match:", input, "->", outputs);
       return cartesianMerge(outputs.flat(1), ifParts);
     }
 
@@ -603,14 +580,12 @@ function filterRecord(config: any, record: OutputRecord): boolean {
       // NOTE: This is an `eval` call!
       const fn = makeBindingFunction(predicate, record);
       if (!fn(config)) {
-        if (verbosity >= Verbosity.Debugging) {
-          console.debug(
-            "Removing because predicate",
-            predicate,
-            "failed:",
-            record,
-          );
-        }
+        logDebug(
+          "Removing because predicate",
+          predicate,
+          "failed:",
+          record,
+        );
         return false;
       }
     }
@@ -658,14 +633,10 @@ function generateMatrixSync(input: Input, config: any): OutputRecord[] {
     throw new Error("Top-level input must be an array or object");
   }
   const flattened = flatten(input);
-  if (verbosity >= Verbosity.Detailed) {
-    console.info("Flattened:", flattened);
-  }
+  logDetailed("Flattened:", flattened);
   const evaluated = flattened.filter((record) => filterRecord(config, record))
     .map((x) => <OutputRecord> JSON.parse(JSON.stringify(x)));
-  if (verbosity >= Verbosity.Detailed) {
-    console.info("Evaluated:", evaluated);
-  }
+  logDetailed("Evaluated:", evaluated);
 
   // This is O(n^2) but hopefully we don't ever hit that complexity. If we do, we'll probably
   // need to use indexes.
@@ -703,8 +674,4 @@ export function generateMatrix(input: Input, config: any, resolve?: ResolveFunct
     return resolved.then((r: Input) => generateMatrixSync(r, config));
   }
   return generateMatrixSync(resolved, config);
-}
-
-export function setVerbosity(verbosity_: Verbosity) {
-  verbosity = verbosity_;
 }
