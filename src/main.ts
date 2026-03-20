@@ -6,10 +6,11 @@ import { highlight } from "npm:cli-highlight";
 import process from "node:process";
 import path from "node:path";
 import fs from "node:fs";
+import { parseYaml } from "./parse.ts";
 
 function parseArg(name: string) {
   try {
-    const output = YAML.parse(core.getInput(name));
+    const output = parseYaml(core.getInput(name));
     if (output === null || output === undefined) {
       return null;
     }
@@ -24,7 +25,7 @@ function parseArg(name: string) {
 function makeResolve(dir: string) {
   return (file: string) => {
     const resolved = path.resolve(dir, file);
-    return { content: YAML.parse(fs.readFileSync(resolved, "utf-8")), resolve: makeResolve(path.dirname(resolved)) };
+    return { content: parseYaml(fs.readFileSync(resolved, "utf-8")), resolve: makeResolve(path.dirname(resolved)) };
   };
 }
 

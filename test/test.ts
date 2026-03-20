@@ -3,6 +3,7 @@ import YAML from "npm:yaml";
 import { printUnifiedDiff } from "npm:print-diff";
 import { generateMatrix } from "../src/matrix.ts";
 import { logDebug, logError, setVerbosity, Verbosity } from "../src/log.ts";
+import { parseYaml, parseJsonc } from "../src/parse.ts";
 
 import {
   assertEquals,
@@ -28,7 +29,7 @@ function dirName(p: string): string {
 function makeResolve(dir: string) {
   return (file: string) => {
     const resolved = `${dir}/${file}`;
-    const content = YAML.parse(Deno.readTextFileSync(resolved));
+    const content = parseYaml(Deno.readTextFileSync(resolved));
     return { content, resolve: makeResolve(dirName(resolved)) };
   };
 }
@@ -120,9 +121,9 @@ function findTest(
 
 function loadTest(file: string, format: Format) {
   const inputText = Deno.readTextFileSync(`${file}.${format.toLowerCase()}`);
-  return format == "JSON"
-    ? JSON.parse(inputText)
-    : (format == "JSONC" ? eval(`(${inputText})`) : YAML.parse(inputText));
+  return format == "JSON" || format == "JSONC"
+    ? parseJsonc(inputText)
+    : parseYaml(inputText);
 }
 
 function generateTestFunction(

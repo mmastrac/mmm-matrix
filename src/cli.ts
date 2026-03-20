@@ -5,6 +5,7 @@ import process from "node:process";
 import fs from "node:fs";
 import path from "node:path";
 import { logError, setVerbosity, Verbosity } from "./log.ts";
+import { parseYaml } from "./parse.ts";
 
 function fail(message: string): never {
   logError(message);
@@ -91,7 +92,7 @@ async function main() {
 
   let inputData;
   try {
-    inputData = YAML.parse(await loadInput(input));
+    inputData = parseYaml(await loadInput(input));
   } catch (e) {
     fail(`Failed to read input: ${e}`);
   }
@@ -99,7 +100,7 @@ async function main() {
   let configData;
   if (config) {
     try {
-      configData = YAML.parse(await loadInput(config));
+      configData = parseYaml(await loadInput(config));
     } catch (e) {
       fail(`Failed to read config: ${e}`);
     }
@@ -108,7 +109,7 @@ async function main() {
   function makeFileResolve(dir: string) {
     return (file: string) => {
       const resolved = path.resolve(dir, file);
-      return { content: YAML.parse(fs.readFileSync(resolved, "utf-8")), resolve: makeFileResolve(path.dirname(resolved)) };
+      return { content: parseYaml(fs.readFileSync(resolved, "utf-8")), resolve: makeFileResolve(path.dirname(resolved)) };
     };
   }
 
@@ -119,7 +120,7 @@ async function main() {
       if (!res.ok) throw new Error(`$include fetch failed: ${res.status} ${res.statusText}`);
       const text = await res.text();
       const parent = resolved.replace(/\/[^/]*$/, "/");
-      return { content: YAML.parse(text), resolve: makeUrlResolve(parent) };
+      return { content: parseYaml(text), resolve: makeUrlResolve(parent) };
     };
   }
 

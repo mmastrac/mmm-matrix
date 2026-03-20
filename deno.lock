@@ -6,6 +6,7 @@
     "npm:ansi-styles@*": "4.3.0",
     "npm:cli-highlight@*": "2.1.11",
     "npm:esbuild@*": "0.19.9",
+    "npm:jsonc-parser@*": "3.3.1",
     "npm:mmm-matrix@*": "1.0.9",
     "npm:mmm-matrix@1.0.9": "1.0.9",
     "npm:print-diff@*": "2.0.0",
@@ -242,6 +243,9 @@
     },
     "is-fullwidth-code-point@3.0.0": {
       "integrity": "sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg=="
+    },
+    "jsonc-parser@3.3.1": {
+      "integrity": "sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ=="
     },
     "mmm-matrix@1.0.9": {
       "integrity": "sha512-9cYXygSyVcQdqPTeGLxUiXSX8eahkGVUKqMf5wNKRCgTynLlp+Pyn403YX8BANoX2KJVgafZI5okSZvZ3Kwvag==",

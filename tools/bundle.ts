@@ -14,13 +14,18 @@ const nodePlugin = {
 
 const plugins = [nodePlugin, ...denoPlugins()];
 
+const shared = {
+  platform: "node" as const,
+  bundle: true,
+  format: "cjs" as const,
+  mainFields: ["module", "main"],
+};
+
 const actionResult = await esbuild.build({
   plugins,
   entryPoints: ["src/main.ts"],
   outfile: "dist/action.js",
-  platform: "node",
-  bundle: true,
-  format: "cjs",
+  ...shared,
 });
 
 if (actionResult.errors.length || actionResult.warnings.length) {
@@ -32,9 +37,7 @@ const cliResult = await esbuild.build({
   plugins,
   entryPoints: ["src/cli.ts"],
   outfile: "dist/cli.cjs",
-  platform: "node",
-  bundle: true,
-  format: "cjs",
+  ...shared,
   banner: { js: "#!/usr/bin/env node" },
 });
 
