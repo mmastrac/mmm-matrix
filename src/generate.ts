@@ -1,5 +1,28 @@
-import { dynamicKey, ifKey, ifSymbol, matchKey, arrayKey, arraysKey, valueKey } from "./keys.ts";
-import { IfValue, Input, isRegularKey, isSpecialKey, MatchObject, OutputRecord, friendlyTypeOf, NestedInputObject, NestedInputValue, InputObjectValue, isNestedInputObject, InputValue } from "./types.ts";
+import {
+  arrayKey,
+  arraysKey,
+  dynamicKey,
+  ifKey,
+  ifSymbol,
+  matchKey,
+  valueKey,
+} from "./keys.ts";
+import {
+  friendlyTypeOf,
+  IfValue,
+  Input,
+  InputObjectValue,
+  InputValue,
+  isArray,
+  isNestedInputObject,
+  isObject,
+  isRegularKey,
+  isSpecialKey,
+  MatchObject,
+  NestedInputObject,
+  NestedInputValue,
+  OutputRecord,
+} from "./types.ts";
 import { isDebugging, logDebug, logDetailed } from "./log.ts";
 
 type SplitValueObject<T = unknown> = {
@@ -25,7 +48,9 @@ function splitValueObject<T>(input: object): SplitValueObject<T> {
     result.value !== undefined && valueKey,
   ].filter(Boolean);
   if (specials.length > 1) {
-    throw new Error(`${specials.join(", ")} cannot be combined in the same object`);
+    throw new Error(
+      `${specials.join(", ")} cannot be combined in the same object`,
+    );
   }
   return result;
 }
@@ -43,14 +68,6 @@ function cartesian<T>(...arr: T[][]): T[][] {
       return a.concat(b);
     }, []);
   }, [[]]);
-}
-
-function isArray<T>(input: T[] | object): input is T[] {
-  return Array.isArray(input);
-}
-
-function isObject(input: unknown): input is object {
-  return typeof input == "object" && input !== null;
 }
 
 function isDynamicObject(
@@ -183,7 +200,9 @@ function flatten(input: Input): OutputRecord[] {
             outputs.push(nestedOutputs.flat(1));
           } else {
             throw new Error(
-              `Unexpected value for '$match': ${friendlyTypeOf(input)} (expected an object)`,
+              `Unexpected value for '$match': ${
+                friendlyTypeOf(input)
+              } (expected an object)`,
             );
           }
         } else if (key == arrayKey) {
@@ -191,7 +210,9 @@ function flatten(input: Input): OutputRecord[] {
             outputs.push(flattenArray(input[arrayKey]));
           } else {
             throw new Error(
-              `Unexpected value for '$array': ${friendlyTypeOf(input)} (expected an array)`,
+              `Unexpected value for '$array': ${
+                friendlyTypeOf(input)
+              } (expected an array)`,
             );
           }
         } else if (key == arraysKey) {
@@ -209,7 +230,9 @@ function flatten(input: Input): OutputRecord[] {
             }
           } else {
             throw new Error(
-              `Unexpected value for '$arrays': ${friendlyTypeOf(input)} (expected an array or an object with numbered keys)`,
+              `Unexpected value for '$arrays': ${
+                friendlyTypeOf(input)
+              } (expected an array or an object with numbered keys)`,
             );
           }
         } else if (isRegularKey(key) || key == ifKey) {
@@ -231,27 +254,42 @@ function flatten(input: Input): OutputRecord[] {
                   ? flattenNestedKeyObject(key, caseValue)
                   : flattenWithKeyInput(key, caseValue);
                 nestedOutputs.push(
-                  cartesianMerge(caseOutputs, [{ [ifSymbol]: condition }], ifParts),
+                  cartesianMerge(
+                    caseOutputs,
+                    [{ [ifSymbol]: condition }],
+                    ifParts,
+                  ),
                 );
               }
-              nestedOutputs.push(cartesianMerge([{ [ifSymbol]: match.default }], ifParts));
+              nestedOutputs.push(
+                cartesianMerge([{ [ifSymbol]: match.default }], ifParts),
+              );
               const regularOutputs = Object.keys(regular).map((rKey) =>
                 flattenWithKeyInput(rKey, regular[rKey] as NestedInputValue)
               );
-              outputs.push(cartesianMerge(nestedOutputs.flat(1), ...regularOutputs));
+              outputs.push(
+                cartesianMerge(nestedOutputs.flat(1), ...regularOutputs),
+              );
             } else if (dynamic !== undefined) {
               outputs.push(
                 cartesianMerge([{ [key]: { [dynamicKey]: dynamic } }], ifParts),
               );
               for (const rKey of Object.keys(regular)) {
-                outputs.push(flattenWithKeyInput(rKey, regular[rKey] as NestedInputValue));
+                outputs.push(
+                  flattenWithKeyInput(rKey, regular[rKey] as NestedInputValue),
+                );
               }
             } else if (value !== undefined) {
               outputs.push(
-                cartesianMerge(flattenWithKeyInput(key, value as NestedInputValue), ifParts),
+                cartesianMerge(
+                  flattenWithKeyInput(key, value as NestedInputValue),
+                  ifParts,
+                ),
               );
               for (const rKey of Object.keys(regular)) {
-                outputs.push(flattenWithKeyInput(rKey, regular[rKey] as NestedInputValue));
+                outputs.push(
+                  flattenWithKeyInput(rKey, regular[rKey] as NestedInputValue),
+                );
               }
             } else {
               outputs.push(
@@ -273,7 +311,9 @@ function flatten(input: Input): OutputRecord[] {
     }
   }
   throw new Error(
-    `Unexpected type in object context: ${friendlyTypeOf(input)} (expected an object or array of objects)`,
+    `Unexpected type in object context: ${
+      friendlyTypeOf(input)
+    } (expected an object or array of objects)`,
   );
 }
 
@@ -300,7 +340,9 @@ function flattenNestedKeyObject(
     }
     if (!isObject(value)) {
       throw new Error(
-        `Unexpected type in object context '${friendlyTypeOf(value)}' (expected an object or array of objects)`,
+        `Unexpected type in object context '${
+          friendlyTypeOf(value)
+        }' (expected an object or array of objects)`,
       );
     }
 
@@ -336,12 +378,11 @@ function flattenWithKeyInput(
   }
 
   if (isObject(input)) {
-    const { match, dynamic, value, if: ifValue, regular } =
-      splitValueObject<InputValue>(input);
+    const { match, dynamic, value, if: ifValue, regular } = splitValueObject<
+      InputValue
+    >(input);
 
-    const ifParts = ifValue !== undefined
-      ? [{ [ifSymbol]: ifValue }]
-      : [];
+    const ifParts = ifValue !== undefined ? [{ [ifSymbol]: ifValue }] : [];
 
     const flattened = Object.keys(regular).flatMap((k) =>
       flattenWithKeyInput(k, regular[k])
@@ -368,7 +409,9 @@ function flattenWithKeyInput(
     if (dynamic !== undefined) {
       if (typeof dynamic !== "string") {
         throw new Error(
-          `Unexpected type in $dynamic value context: ${friendlyTypeOf(dynamic)}`,
+          `Unexpected type in $dynamic value context: ${
+            friendlyTypeOf(dynamic)
+          }`,
         );
       }
       return cartesianMerge(
@@ -384,11 +427,15 @@ function flattenWithKeyInput(
     }
 
     throw new Error(
-      `Unexpected type in object context: '${friendlyTypeOf(input)}' (expected an object or array of objects)`,
+      `Unexpected type in object context: '${
+        friendlyTypeOf(input)
+      }' (expected an object or array of objects)`,
     );
   }
   throw new Error(
-    `Unexpected type in object value context for key '${key}': ${friendlyTypeOf(input)}`,
+    `Unexpected type in object value context for key '${key}': ${
+      friendlyTypeOf(input)
+    }`,
   );
 }
 
@@ -482,7 +529,10 @@ function itemShouldMaskPrevious(
 }
 
 // deno-lint-ignore no-explicit-any
-export function generateNormalizedMatrix(input: Input, config: any): OutputRecord[] {
+export function generateNormalizedMatrix(
+  input: Input,
+  config: any,
+): OutputRecord[] {
   if (!isObject(input) && !isArray(input)) {
     throw new Error("Top-level input must be an array or object");
   }

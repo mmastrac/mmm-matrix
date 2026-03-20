@@ -1,4 +1,12 @@
-import { dynamicKey, ifKey, ifSymbol, matchKey, arrayKey, arraysKey, valueKey } from "./keys.ts";
+import {
+  arrayKey,
+  arraysKey,
+  dynamicKey,
+  ifKey,
+  ifSymbol,
+  matchKey,
+  valueKey,
+} from "./keys.ts";
 
 export type OutputValue = string | boolean | { [dynamicKey]: string };
 export type IfValue = string | string[];
@@ -125,4 +133,12 @@ export function friendlyTypeOf(input: unknown): string {
   if (input === undefined) return "undefined";
   if (Array.isArray(input)) return "array";
   return typeof input;
+}
+
+export function isArray<T>(input: T[] | object): input is T[] {
+  return Array.isArray(input);
+}
+
+export function isObject(input: unknown): input is object {
+  return typeof input == "object" && input !== null && !Array.isArray(input);
 }
