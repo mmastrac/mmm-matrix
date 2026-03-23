@@ -33,6 +33,18 @@ if (actionResult.errors.length || actionResult.warnings.length) {
   Deno.exit(1);
 }
 
+const libResult = await esbuild.build({
+  plugins,
+  entryPoints: ["src/index.ts"],
+  outfile: "dist/index.cjs",
+  ...shared,
+});
+
+if (libResult.errors.length || libResult.warnings.length) {
+  logError(libResult);
+  Deno.exit(1);
+}
+
 const cliResult = await esbuild.build({
   plugins,
   entryPoints: ["src/cli.ts"],
