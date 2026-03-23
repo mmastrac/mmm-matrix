@@ -1,5 +1,5 @@
 /// Entrypoint for the GitHub Action.
-import { generateMatrix } from "./matrix.ts";
+import { generateMatrix, indexMatrix } from "./matrix.ts";
 import * as core from "npm:@actions/core";
 import YAML from "npm:yaml";
 import { highlight } from "npm:cli-highlight";
@@ -49,6 +49,16 @@ if (defaultMatrix) {
 
 const config = parseArg("config");
 
+function parseIndexKeys(): string[] {
+  const raw = core.getInput("index");
+  if (!raw) return [];
+  const parsed = parseYaml(raw);
+  if (Array.isArray(parsed)) return parsed.map(String);
+  if (typeof parsed === "string") return parsed.split(",").map((s: string) => s.trim()).filter(Boolean);
+  return [];
+}
+const indexKeys = parseIndexKeys();
+
 core.startGroup("Config object");
 core.info(highlight(YAML.stringify(config), { language: "yaml" }));
 core.endGroup();
@@ -78,4 +88,20 @@ core.info(highlight(YAML.stringify(output), { language: "yaml" }));
 core.endGroup();
 
 core.setOutput("matrix", JSON.stringify(output));
+
+if (indexKeys.length > 0) {
+  try {
+    const indexed = indexMatrix(output, indexKeys);
+    for (const [key, dict] of Object.entries(indexed)) {
+      core.startGroup(`Indexed by '${key}'`);
+      core.info(highlight(YAML.stringify(dict), { language: "yaml" }));
+      core.endGroup();
+      core.setOutput(`matrix_${key}`, JSON.stringify(dict));
+    }
+  } catch (e) {
+    core.setFailed(e as string);
+    process.exit(1);
+  }
+}
+
 core.info("Success.");

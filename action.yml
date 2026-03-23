@@ -20,6 +20,9 @@ inputs:
   config:
     description: 'Configuration (YAML)'
     required: false
+  index:
+    description: 'Keys to index the output by (YAML list or comma-separated). Produces matrix_{key} outputs.'
+    required: false
 outputs:
   matrix:
     description: 'The generated matrix JSON'

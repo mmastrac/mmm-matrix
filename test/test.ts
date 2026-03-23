@@ -1,12 +1,14 @@
 /// <reference lib="deno.ns" />
 import YAML from "npm:yaml";
 import { printUnifiedDiff } from "npm:print-diff";
-import { generateMatrix } from "../src/matrix.ts";
+import { generateMatrix, indexMatrix } from "../src/matrix.ts";
+import { OutputRecord } from "../src/types.ts";
 import { logDebug, logError, setVerbosity, Verbosity } from "../src/log.ts";
 import { parseYaml, parseJsonc } from "../src/parse.ts";
 
 import {
   assertEquals,
+  assertThrows,
   fail,
 } from "https://deno.land/std@0.214.0/assert/mod.ts";
 
@@ -194,3 +196,59 @@ function testGenerateError(input: any, config: any, output: any, testResolve: Re
     assertEquals(actual, expected);
   }
 }
+
+// --- indexMatrix tests ---
+
+Deno.test("indexMatrix: basic indexing by a unique key", () => {
+  const items = [
+    { label: "linux", os: "ubuntu-latest" },
+    { label: "macos", os: "macOS-latest" },
+  ];
+  const result = indexMatrix(items, ["label"]);
+  assertEquals(result, {
+    label: {
+      linux: { label: "linux", os: "ubuntu-latest" },
+      macos: { label: "macos", os: "macOS-latest" },
+    },
+  });
+});
+
+Deno.test("indexMatrix: multiple index keys", () => {
+  const items = [
+    { label: "linux", os: "ubuntu-latest" },
+    { label: "macos", os: "macOS-latest" },
+  ];
+  const result = indexMatrix(items, ["label", "os"]);
+  assertEquals(Object.keys(result), ["label", "os"]);
+  assertEquals(result.label.linux, { label: "linux", os: "ubuntu-latest" });
+  assertEquals(result.os["macOS-latest"], { label: "macos", os: "macOS-latest" });
+});
+
+Deno.test("indexMatrix: error on duplicate values", () => {
+  const items = [
+    { label: "linux", os: "ubuntu-latest", job: "build" },
+    { label: "linux", os: "ubuntu-latest", job: "test" },
+  ];
+  assertThrows(
+    () => indexMatrix(items, ["label"]),
+    Error,
+    "Duplicate value 'linux' for index key 'label'",
+  );
+});
+
+Deno.test("indexMatrix: error on missing key", () => {
+  const items: OutputRecord[] = [
+    { label: "linux", os: "ubuntu-latest" },
+    { os: "macOS-latest" },
+  ];
+  assertThrows(
+    () => indexMatrix(items, ["label"]),
+    Error,
+    "Index key 'label' is missing from matrix item",
+  );
+});
+
+Deno.test("indexMatrix: empty output", () => {
+  const result = indexMatrix([], ["label"]);
+  assertEquals(result, { label: {} });
+});
