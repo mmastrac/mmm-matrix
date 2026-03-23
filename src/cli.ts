@@ -1,5 +1,5 @@
 /// Entrypoint for the CLI (npx mmm-matrix ...).
-import { generateMatrix } from "./matrix.ts";
+import { generateMatrix, indexMatrix } from "./matrix.ts";
 import YAML from "npm:yaml";
 import process from "node:process";
 import fs from "node:fs";
@@ -57,6 +57,7 @@ function parseArgs(argv: string[]) {
   let output: string | undefined;
   let outputFormat: "yaml" | "json" = "yaml";
   let verbose = false;
+  const indexKeys: string[] = [];
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--config") {
@@ -69,6 +70,10 @@ function parseArgs(argv: string[]) {
       const fmt = args[++i];
       if (fmt !== "yaml" && fmt !== "json") fail("--output-format must be 'yaml' or 'json'");
       outputFormat = fmt;
+    } else if (args[i] === "--index") {
+      const keys = args[++i];
+      if (!keys) fail("--index requires a comma-separated list of keys");
+      indexKeys.push(...keys.split(",").map((s: string) => s.trim()).filter(Boolean));
     } else if (args[i] === "--verbose") {
       verbose = true;
     } else if (args[i].startsWith("-")) {
@@ -79,12 +84,12 @@ function parseArgs(argv: string[]) {
     }
   }
 
-  if (!input) fail("Usage: mmm-matrix <input.{yaml,json} | url> [--config <config.{yaml,json} | url>] [--output <output>] [--output-format yaml|json] [--verbose]");
-  return { input, config, output, outputFormat, verbose };
+  if (!input) fail("Usage: mmm-matrix <input.{yaml,json} | url> [--config <config.{yaml,json} | url>] [--output <output>] [--output-format yaml|json] [--index <keys>] [--verbose]");
+  return { input, config, output, outputFormat, verbose, indexKeys };
 }
 
 async function main() {
-  const { input, config, output, outputFormat, verbose } = parseArgs(process.argv);
+  const { input, config, output, outputFormat, verbose, indexKeys } = parseArgs(process.argv);
 
   if (verbose) {
     setVerbosity(Verbosity.Debugging);
@@ -139,14 +144,31 @@ async function main() {
     fail(`Failed to generate matrix: ${e}`);
   }
 
-  const text = outputFormat === "json"
-    ? JSON.stringify(result, null, 2) + "\n"
-    : YAML.stringify(result);
+  const format = (data: unknown) => outputFormat === "json"
+    ? JSON.stringify(data, null, 2) + "\n"
+    : YAML.stringify(data);
 
-  if (output) {
-    fs.writeFileSync(output, text);
+  if (indexKeys.length > 0) {
+    const indexed = indexMatrix(result, indexKeys);
+    if (output) {
+      fs.writeFileSync(output, format(result));
+      for (const [key, dict] of Object.entries(indexed)) {
+        const ext = outputFormat === "json" ? "json" : "yaml";
+        fs.writeFileSync(`${output}.${key}.${ext}`, format(dict));
+      }
+    } else {
+      process.stdout.write(format(result));
+      for (const [key, dict] of Object.entries(indexed)) {
+        process.stderr.write(`\n--- matrix_${key} ---\n`);
+        process.stderr.write(format(dict));
+      }
+    }
   } else {
-    process.stdout.write(text);
+    if (output) {
+      fs.writeFileSync(output, format(result));
+    } else {
+      process.stdout.write(format(result));
+    }
   }
 }
 
