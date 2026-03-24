@@ -336,6 +336,64 @@ os: [linux, windows, { "$value": "mac", arm: [true, false] }]
 [{ os: linux }, { os: windows }, { os: mac, arm: true }, { os: mac, arm: false }]
 ```
 
+### `$range`
+
+The `$range` key generates a sequence of numeric values, following Python's
+`range()` semantics. The upper bound is exclusive.
+
+Array form with 1, 2, or 3 arguments (stop / start,stop / start,stop,step):
+
+```yaml
+shard: { "$range": [4] }
+
+# Results in:
+
+[{ shard: 0 }, { shard: 1 }, { shard: 2 }, { shard: 3 }]
+```
+
+```yaml
+version: { "$range": [10, 14] }
+
+# Results in:
+
+[{ version: 10 }, { version: 11 }, { version: 12 }, { version: 13 }]
+```
+
+```yaml
+version: { "$range": [10, 22, 2] }
+
+# Results in:
+
+[{ version: 10 }, { version: 12 }, { version: 14 }, { version: 16 }, { version: 18 }, { version: 20 }]
+```
+
+Object form with named properties (`start` defaults to 0, `step` defaults to 1):
+
+```yaml
+shard: { "$range": { stop: 4 } }
+shard: { "$range": { start: 0, stop: 6, step: 2 } }
+```
+
+Negative steps are supported for counting down:
+
+```yaml
+countdown: { "$range": [5, 0, -1] }
+
+# Results in:
+
+[{ countdown: 5 }, { countdown: 4 }, { countdown: 3 }, { countdown: 2 }, { countdown: 1 }]
+```
+
+`$range` can be combined with `$if` and other keys, and multiplied with other
+axes like any other value:
+
+```yaml
+os: [linux, mac]
+shard: { "$range": [3] }
+
+# Results in 6 items: every combination of os and shard
+```
+
 ### `$match`
 
 Adding the special `$match` key to an object creates a switch-like statement

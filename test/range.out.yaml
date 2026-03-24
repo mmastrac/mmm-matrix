@@ -1,0 +1,12 @@
+- os: linux
+  count: 0
+- os: linux
+  count: 1
+- os: linux
+  count: 2
+- os: mac
+  count: 0
+- os: mac
+  count: 1
+- os: mac
+  count: 2

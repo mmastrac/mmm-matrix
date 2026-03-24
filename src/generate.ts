@@ -5,6 +5,7 @@ import {
   ifKey,
   ifSymbol,
   matchKey,
+  rangeKey,
   valueKey,
 } from "./keys.ts";
 import {
@@ -22,13 +23,87 @@ import {
   NestedInputObject,
   NestedInputValue,
   OutputRecord,
+  RangeValue,
 } from "./types.ts";
 import { isDebugging, logDebug, logDetailed } from "./log.ts";
+
+const MAX_RANGE_LENGTH = 1000;
+
+function expandRange(input: RangeValue): number[] {
+  let start: number, stop: number, step: number;
+
+  if (isArray(input)) {
+    const arr = input as number[];
+    if (arr.length === 1) {
+      [stop] = arr;
+      start = 0;
+      step = 1;
+    } else if (arr.length === 2) {
+      [start, stop] = arr;
+      step = 1;
+    } else if (arr.length === 3) {
+      [start, stop, step] = arr;
+    } else {
+      throw new Error(
+        `$range array must have 1 to 3 elements, got ${arr.length}`,
+      );
+    }
+    for (const v of arr) {
+      if (typeof v !== "number") {
+        throw new Error(
+          `$range values must be numbers, got ${friendlyTypeOf(v)}`,
+        );
+      }
+    }
+  } else if (isObject(input)) {
+    const obj = input as Record<string, unknown>;
+    if (!("stop" in obj) || typeof obj.stop !== "number") {
+      throw new Error("$range object requires a numeric 'stop' property");
+    }
+    stop = obj.stop;
+    start = typeof obj.start === "number" ? obj.start : 0;
+    step = typeof obj.step === "number" ? obj.step : 1;
+  } else {
+    throw new Error(
+      `$range value must be an array or object, got ${friendlyTypeOf(input)}`,
+    );
+  }
+
+  if (step === 0) {
+    throw new Error("$range step must not be zero");
+  }
+
+  if ((step > 0 && start >= stop) || (step < 0 && start <= stop)) {
+    throw new Error(
+      `$range would produce no values (start=${start}, stop=${stop}, step=${step})`,
+    );
+  }
+
+  const length = Math.ceil((stop - start) / step);
+  if (length > MAX_RANGE_LENGTH) {
+    throw new Error(
+      `$range would produce ${length} values, which exceeds the maximum of ${MAX_RANGE_LENGTH}`,
+    );
+  }
+
+  const result: number[] = [];
+  if (step > 0) {
+    for (let i = start; i < stop; i += step) {
+      result.push(i);
+    }
+  } else {
+    for (let i = start; i > stop; i += step) {
+      result.push(i);
+    }
+  }
+  return result;
+}
 
 type SplitValueObject<T = unknown> = {
   match?: MatchObject<T>;
   dynamic?: string;
   value?: T;
+  range?: RangeValue;
   if?: IfValue;
   regular: { [key: string]: T };
 };
@@ -39,6 +114,7 @@ function splitValueObject<T>(input: object): SplitValueObject<T> {
     if (key === matchKey) result.match = val;
     else if (key === dynamicKey) result.dynamic = val;
     else if (key === valueKey) result.value = val;
+    else if (key === rangeKey) result.range = val;
     else if (key === ifKey) result.if = val;
     else result.regular[key] = val;
   }
@@ -46,6 +122,7 @@ function splitValueObject<T>(input: object): SplitValueObject<T> {
     result.match !== undefined && matchKey,
     result.dynamic !== undefined && dynamicKey,
     result.value !== undefined && valueKey,
+    result.range !== undefined && rangeKey,
   ].filter(Boolean);
   if (specials.length > 1) {
     throw new Error(
@@ -173,8 +250,8 @@ function flatten(input: Input): OutputRecord[] {
     return flattenArray(input);
   }
   if (isObject(input)) {
-    if (valueKey in input || dynamicKey in input) {
-      throw new Error("Illegal $value or $dynamic key in object context");
+    if (valueKey in input || dynamicKey in input || rangeKey in input) {
+      throw new Error("Illegal $value, $dynamic, or $range key in object context");
     }
     const keys = Object.keys(input);
     if (keys.length == 0) {
@@ -241,7 +318,7 @@ function flatten(input: Input): OutputRecord[] {
             throw new Error("'undefined' is not a valid value");
           }
           if (typeof nested == "object" && !Array.isArray(nested)) {
-            const { match: matchObj, dynamic, value, if: ifValue, regular } =
+            const { match: matchObj, dynamic, value, range, if: ifValue, regular } =
               splitValueObject<InputObjectValue>(nested);
             const ifParts = ifValue !== undefined
               ? [{ [ifSymbol]: ifValue }]
@@ -273,6 +350,19 @@ function flatten(input: Input): OutputRecord[] {
             } else if (dynamic !== undefined) {
               outputs.push(
                 cartesianMerge([{ [key]: { [dynamicKey]: dynamic } }], ifParts),
+              );
+              for (const rKey of Object.keys(regular)) {
+                outputs.push(
+                  flattenWithKeyInput(rKey, regular[rKey] as NestedInputValue),
+                );
+              }
+            } else if (range !== undefined) {
+              const expanded = expandRange(range);
+              outputs.push(
+                cartesianMerge(
+                  expanded.map((v) => ({ [key]: v })),
+                  ifParts,
+                ),
               );
               for (const rKey of Object.keys(regular)) {
                 outputs.push(
@@ -369,7 +459,7 @@ function flattenWithKeyInput(
   key: string,
   input: NestedInputValue,
 ): OutputRecord[] {
-  if (typeof input == "string" || typeof input == "boolean") {
+  if (typeof input == "string" || typeof input == "boolean" || typeof input == "number") {
     return [{ [key]: input }];
   }
 
@@ -378,7 +468,7 @@ function flattenWithKeyInput(
   }
 
   if (isObject(input)) {
-    const { match, dynamic, value, if: ifValue, regular } = splitValueObject<
+    const { match, dynamic, value, range, if: ifValue, regular } = splitValueObject<
       InputValue
     >(input);
 
@@ -416,6 +506,15 @@ function flattenWithKeyInput(
       }
       return cartesianMerge(
         [{ [key]: { [dynamicKey]: dynamic } }],
+        flattened,
+        ifParts,
+      );
+    }
+
+    if (range !== undefined) {
+      const expanded = expandRange(range);
+      return cartesianMerge(
+        expanded.map((v) => ({ [key]: v })),
         flattened,
         ifParts,
       );

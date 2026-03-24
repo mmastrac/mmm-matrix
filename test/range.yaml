@@ -1,0 +1,2 @@
+os: [linux, mac]
+count: { "$range": [3] }

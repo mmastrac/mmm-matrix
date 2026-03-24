@@ -4,6 +4,7 @@ export const valueKey = "$value";
 export const dynamicKey = "$dynamic";
 export const arrayKey = "$array";
 export const arraysKey = "$arrays";
+export const rangeKey = "$range";
 export const includeKey = "$include";
 
 // Workaround for https://github.com/microsoft/TypeScript/issues/17867

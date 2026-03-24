@@ -5,10 +5,11 @@ import {
   ifKey,
   ifSymbol,
   matchKey,
+  rangeKey,
   valueKey,
 } from "./keys.ts";
 
-export type OutputValue = string | boolean | { [dynamicKey]: string };
+export type OutputValue = string | number | boolean | { [dynamicKey]: string };
 export type IfValue = string | string[];
 export type OutputRecord = { [key: string]: OutputValue; [ifSymbol]?: IfValue };
 
@@ -26,8 +27,14 @@ export type InputObject = {
   [matchKey]?: MatchObject<Input>;
 };
 
+export type RangeArray = [number] | [number, number] | [number, number, number];
+export type RangeObject = { start?: number; stop: number; step?: number };
+export type RangeValue = RangeArray | RangeObject;
+
 export type InputObjectValue = InputValue | NestedInputObject | {
   [dynamicKey]: string;
+} | {
+  [rangeKey]: RangeValue;
 };
 
 // eg: the "mac: ..." in label: mac: os: osx
@@ -37,10 +44,10 @@ export function isNestedInputObject(
   input: InputObjectValue,
 ): input is NestedInputObject {
   return typeof input === "object" && !Array.isArray(input) &&
-    !(dynamicKey in input);
+    !(dynamicKey in input) && !(rangeKey in input);
 }
 
-export type InputValue = string | boolean | InputValue[];
+export type InputValue = string | number | boolean | InputValue[];
 export type NestedInputValue = InputValue | InputValueObject;
 
 export type InputValueObject =
